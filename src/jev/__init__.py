@@ -21,6 +21,7 @@ from jev.exceptions import (
 
 from jev.prompt_builder import PromptBuilder
 from jev.vram_manager import VRAMManager, default_vram_manager
+from jev.zero_decode import ZeroDecodeClient
 
 __version__ = "0.1.0"
 
@@ -42,4 +43,5 @@ __all__ = [
     "VRAMManager",
     "default_vram_manager",
     "PromptBuilder",
+    "ZeroDecodeClient",
 ]
