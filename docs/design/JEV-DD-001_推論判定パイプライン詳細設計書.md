@@ -49,15 +49,17 @@ related_documents:
 | **システムRAM** | 32 GB 以上 | 16 GB 以上 | 16 GB 以上 |
 | **OS** | Windows 11 (64-bit) / Linux | Windows 10 / Ubuntu 22.04+ | 共通 |
 
-### 2.2 推奨モデル階層（Model Tiering）
+### 2.2 PoC検証済みリファレンスモデル構成（暫定推奨）
 
-実機検証で確認された各モデルの特性に基づき、以下の3階層で運用します。
+> **モデル非依存設計に関する注記:**  
+> 本システム（JEV）は特定のモデルに固定（ロックイン）されないモデル非依存アーキテクチャを採用しています。以下の構成は、初期PoC実機検証（Issue #1〜#8）においてローカル既存環境を基準に動作確認を行った**リファレンス構成（暫定推奨）**です。  
+> 本番運用に向けた正式なモデル選定・横断ベンチマーク比較は **[Issue #9](https://github.com/xzyozi/jev-localsystem/issues/9)** にて継続実施・評価を行います。
 
-| Tier | モデル識別名 | 量子化 | VRAM専有 | 推論速度 | 得意タスクと選定理由 |
+| Tier | モデル識別名 | 量子化 | VRAM専有 | 推論速度 | 得意タスクとPoC検証成果 |
 | :---: | :--- | :---: | :---: | :---: | :--- |
-| **Tier 1<br>(Primary)** | **`qwen2.5-coder:14b-instruct`** | Q4_K_M | 約 9.0 GB | 約150ms | **標準主軸エンジン**。<br>論理・コード判定、Multi-Label（マージンギャップ10.7pt）、Score期待値（4.25〜1.01点）で最高精度を実証。 |
-| **Tier 2<br>(Fast-Think)** | **`gemma4-12b-it-Q4_K_M:latest`** | Q4_K_M | 約 7.1 GB | 約130ms | **高速判定エンジン**。<br>Prompt Prefill（空思考タグ事前注入）により思考ループをスキップし、130ms即時判定が可能。 |
-| **Tier 3<br>(Lightweight)** | **`microsoft/deberta-v3-large`** | FP16 | 約 1.2 GB | 約 25ms | **省VRAM特化（将来拡張）**。<br>Encoder-Only構造によりVRAM 1GB台で動作。単純テキスト分類専用。 |
+| **Tier 1<br>(Primary Ref)** | **`qwen2.5-coder:14b-instruct`** | Q4_K_M | 約 9.0 GB | 約150ms | **標準主軸リファレンス**。<br>論理・コード判定、Multi-Label（分離度10.7pt）、Score期待値（4.25〜1.01点）で最高精度を実証。 |
+| **Tier 2<br>(Fast-Think Ref)** | **`gemma4-12b-it-Q4_K_M:latest`** | Q4_K_M | 約 7.1 GB | 約130ms | **高速判定リファレンス**。<br>Prompt Prefill（空思考タグ事前注入）により思考ループをスキップし、130ms即時判定が可能。 |
+| **Tier 3<br>(Lightweight)** | **`microsoft/deberta-v3-large`** | FP16 | 約 1.2 GB | 約 25ms | **省VRAM特化（将来拡張候補）**。<br>Encoder-Only構造によりVRAM 1GB台で動作。単純テキスト分類専用。 |
 
 ### 2.3 バックエンド接続仕様
 - **エンドポイント**: `http://localhost:11434/v1/chat/completions` (OpenAI互換 REST API)
