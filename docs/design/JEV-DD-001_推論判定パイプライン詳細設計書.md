@@ -18,8 +18,8 @@ related_documents:
 | :--- | :--- |
 | 文書番号 | JEV-DD-001 |
 | ドキュメント名 | JEV 推論判定パイプライン詳細設計書 |
-| 版数 | Rev.1.1 (本番採用モデル確定・Issue #9 実機検証反映) |
-| 改訂日 | 2026-09-20 |
+| 版数 | Rev.1.2 (Core具象モジュール実装・DTO拡張・2層APIアーキテクチャ反映) |
+| 改訂日 | 2026-09-21 |
 | 作成日 | 2026-09-20 |
 | 作成者 | JEV Architecture Team |
 
@@ -101,7 +101,8 @@ related_documents:
 | `rule_definition` | `str` | 任意 | `""` | 動的注入するルール・基準（RAGチャンクや判定要件） |
 | `labels` | `List[str]` | 任意 | `[]` | 選択肢または分類対象ラベル名リスト |
 | `swap_verify` | `bool` | 任意 | `False` | 位置バイアス相殺のためのスワップ推論（2回実行）を行うか |
-| `temperature` | `float` | 任意 | `1.0` | Scoreタスク等の確率平滑化温度パラメータ |
+| `temperature` | `float` | 任意 | `1.0` | Scoreタスク等の確率平滑化温度パラメータ（>0.0） |
+| `model` | `Optional[str]` | 任意 | `None` | 指定モデル識別名（省略時はTier 1主軸モデル `qwen3:8b`） |
 
 ### 3.2 共通レスポンス DTO (`JudgeResponseDTO`)
 
@@ -115,6 +116,7 @@ related_documents:
 | `latency_ms` | `float` | 必須 | パイプライン全体の所要時間（ミリ秒） |
 | `confidence` | `float` | 任意 | 判定結果の信頼度（0.0 〜 1.0） |
 | `details` | `Dict` | 任意 | 確率分布やマージン等の詳細計算データ |
+| `error_message` | `Optional[str]` | 任意 | エラー時またはINCONCLUSIVE判定時の詳細理由 |
 
 ### 3.3 タスク別レスポンス仕様
 
@@ -155,7 +157,33 @@ related_documents:
 
 ---
 
-## 4. パイプライン処理フロー・シーケンス (Mermaid 図)
+## 4. モジュール構成とパイプライン処理仕様
+
+### 4.1 物理モジュール・具象クラス設計 (`src/jev/`)
+
+本パイプラインは、関心事の分離（SoC）を徹底した以下のPythonモジュール・クラス群で実装されます。
+
+| モジュールパス | 主要クラス / 関数 | 責務と役割 (Responsibility) |
+| :--- | :--- | :--- |
+| `src/jev/dto.py` | `JudgeRequestDTO`<br>`JudgeResponseDTO` 等 | 入出力データのPydantic型バリデーションおよびタスク別詳細構造 |
+| `src/jev/exceptions.py` | `JevError`<br>`PayloadTooLargeError` 等 | ハードリミット超過やタイムアウト等の安全回路例外定義 |
+| `src/jev/vram_manager.py` | `VRAMManager`<br>`default_vram_manager` | セマフォによる直列FIFO排他制御および文字数/トークン長リミッター |
+| `src/jev/prompt_builder.py` | `PromptBuilder` | 思考モデル向け空タグPrefill注入、ラベル記号化、A/Bスワップ生成 |
+| `src/jev/zero_decode.py` | `ZeroDecodeClient` | 1Forwardパスによるlogprobs抽出および通信レイテンシ計測 |
+| `src/jev/result_mapper.py` | `ResultMapper` | 空白バリアント対数和合算、スワップ照合、連続値期待値算出 |
+| `src/jev/pipeline.py` | `JudgePipeline` | 外部向け統合ファサード、タスク別ショートカットメソッド提供 |
+
+### 4.2 2層システムアーキテクチャ（Core SDK と Web API）
+
+JEVシステムは、推論コアロジックの再利用性と疎結合性を担保するため、以下の2層構造を採用します。
+
+1. **Core SDK レイヤー (`src/jev/`)**:
+   - 外部Webフレームワークに非依存の純粋なPython推論ライブラリ。
+   - 他のPythonアプリケーションやエージェントから `from jev import JudgePipeline` で直接インポートして超高速に実行可能。
+2. **Web API アダプターレイヤー (FastAPI / 拡張フェーズ)**:
+   - Core SDK の上位に位置し、外部からの HTTP/JSON リクエスト（`POST /api/v1/noul` 等）を `JudgeRequestDTO` にマッピングしてCoreに委譲する薄いサーバー層。
+
+### 4.3 パイプライン処理フロー・シーケンス (Mermaid 図)
 
 実機検証の知見（Prefill、空白対数和、Swap Resolver）を統合した処理シーケンスです。
 
@@ -196,3 +224,5 @@ flowchart TD
 | 版数 | 改訂日 | 変更者 | 変更内容・変更理由 (Why) |
 | :--- | :--- | :--- | :--- |
 | Rev.1.0 | 2026-09-20 | JEV Architecture Team | 新規作成（全8件の検証実測成果に基づく推論パイプライン・モデル階層・ハードウェア諸元の詳細仕様策定） |
+| Rev.1.1 | 2026-09-20 | JEV Architecture Team | Issue #9 実機横断検証成果反映（本番採用モデル確定: Tier 1 Qwen3:8B, Tier 2 Phi4-mini:latest） |
+| Rev.1.2 | 2026-09-21 | JEV Architecture Team | Core具象モジュール・クラス設計確定、DTOフィールド拡張（model, error_message）、および2層APIアーキテクチャの定義 |
