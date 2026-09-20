@@ -1,7 +1,7 @@
 """JEV REST API サーバー起動エントリーポイント"""
 
 import argparse
-import sys
+
 import uvicorn
 
 from jev.server.config import settings

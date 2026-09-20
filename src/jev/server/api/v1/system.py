@@ -1,7 +1,7 @@
 """JEV REST API システム運用・監視・メトリクスルーターモジュール"""
 
-import requests
 from fastapi import APIRouter
+import requests
 
 from jev.server.config import settings
 from jev.server.schemas import (

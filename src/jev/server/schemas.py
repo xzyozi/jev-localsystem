@@ -1,10 +1,8 @@
 """JEV REST API リクエスト・レスポンススキーマ定義モジュール"""
 
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
+
 from pydantic import BaseModel, Field
-
-from jev.dto import JudgeRequestDTO, JudgeResponseDTO, JudgeStatus, TaskType
-
 
 # ==========================================
 # タスク別リクエストスキーマ

@@ -1,6 +1,7 @@
 """JEV REST API サーバー設定モジュール"""
 
 import os
+
 from pydantic import BaseModel, Field
 
 

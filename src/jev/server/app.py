@@ -2,6 +2,7 @@
 
 import logging
 import sys
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -12,7 +13,6 @@ from jev.exceptions import (
     JevError,
     PayloadTooLargeError,
     QueueTimeoutError,
-    TokenNotFoundError,
 )
 from jev.server.api.v1 import judge_router, system_router
 from jev.server.config import settings
