@@ -20,6 +20,7 @@ from jev.exceptions import (
 )
 
 from jev.prompt_builder import PromptBuilder
+from jev.result_mapper import ResultMapper
 from jev.vram_manager import VRAMManager, default_vram_manager
 from jev.zero_decode import ZeroDecodeClient
 
@@ -44,4 +45,5 @@ __all__ = [
     "default_vram_manager",
     "PromptBuilder",
     "ZeroDecodeClient",
+    "ResultMapper",
 ]
