@@ -19,6 +19,7 @@ from jev.exceptions import (
     TokenNotFoundError,
 )
 
+from jev.pipeline import JudgePipeline
 from jev.prompt_builder import PromptBuilder
 from jev.result_mapper import ResultMapper
 from jev.vram_manager import VRAMManager, default_vram_manager
@@ -46,4 +47,5 @@ __all__ = [
     "PromptBuilder",
     "ZeroDecodeClient",
     "ResultMapper",
+    "JudgePipeline",
 ]
