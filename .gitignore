@@ -53,3 +53,4 @@ ehthumbs.db
 # Logs & Caches
 *.log
 .pytest_cache/
+scratch/
