@@ -49,17 +49,31 @@ related_documents:
 | **システムRAM** | 32 GB 以上 | 16 GB 以上 | 16 GB 以上 |
 | **OS** | Windows 11 (64-bit) / Linux | Windows 10 / Ubuntu 22.04+ | 共通 |
 
-### 2.2 PoC検証済みリファレンスモデル構成（暫定推奨）
+### 2.2 モデル階層アーキテクチャ（本番候補マトリクス & PoCリファレンス）
 
-> **モデル非依存設計に関する注記:**  
-> 本システム（JEV）は特定のモデルに固定（ロックイン）されないモデル非依存アーキテクチャを採用しています。以下の構成は、初期PoC実機検証（Issue #1〜#8）においてローカル既存環境を基準に動作確認を行った**リファレンス構成（暫定推奨）**です。  
-> 本番運用に向けた正式なモデル選定・横断ベンチマーク比較は **[Issue #9](https://github.com/xzyozi/jev-localsystem/issues/9)** にて継続実施・評価を行います。
+> **モデル非依存設計と選定ロードマップ:**  
+> 本システム（JEV）は特定のモデルに固定（ロックイン）されないモデル非依存アーキテクチャを採用しています。  
+> 以下の構成は、2026年最新オープンモデル（Llama 4, Qwen 3, Gemma 3, ModernBERT-v2等）を対象とした本番選定マトリクス（[Issue #9](https://github.com/xzyozi/jev-localsystem/issues/9) にて検証中）および、初期PoC実証済みのリファレンス構成です。
+
+#### 2.2.1 本番採用候補モデルマトリクス（2026年最新アーキテクチャ・Issue #9 検証中）
+
+| カテゴリ | モデル候補 | パラメータ / 量子化 | VRAM目安 | 特徴・JEV検証観点 |
+| :--- | :--- | :---: | :---: | :--- |
+| **① 高精度・論理特化**<br>(14B級) | **`qwen3:14b-instruct`** | 14.7B<br>(Q4_K_M) | 約 9.0 GB | **【論理最高峰】** System 2的思考強化モデルに対し、Prompt Prefillだけで直感的なSystem 1確率が正確にLogitに現れるかを検証。 |
+| **② バランス本命**<br>(8B〜9B級) | **`llama-4:8b-instruct`**<br>**`gemma-3-9b-it`** | 8.0B〜9.2B<br>(Q4_K_M) | 約 5.5〜6.5 GB | **【標準本命】** 改良トークナイザーと新Attention機構による複数ラベル（Sigmoid抽出）時の対数確率分離度を測定。 |
+| **③ 超軽量・常駐型**<br>(3B〜4B級) | **`llama-4:3b-instruct`**<br>**`phi-4-mini-instruct`** | 3B〜3.8B<br>**★ (Q8_0)** | 約 3.5〜4.5 GB | **【Q8_0無劣化抽出】** VRAM余力を活かし8-bit(Q8_0)を採用。量子化歪みを完全排除した状態でのF1スコア限界を検証。 |
+| **④ 日本語特化型**<br>(8B級) | **`Llama-4-ELYZA-JP-8B`**<br>(または最新Swallow) | 8.0B<br>(Q4_K_M) | 約 5.5 GB | **【和製チューニング】** 日本固有のビジネスロジックや法務判定において、ベースモデルとの確信度マージン差を比較。 |
+| **⑤ Encoder特化**<br>(非LLM / 0.4B級) | **`ModernBERT-v2-large`** | 0.4B<br>(FP16/FP32) | 約 1.5 GB | **【純粋分類器】** 文章生成をしない純粋Encoder。VRAM 1.5GBで数十ミリ秒判定というJEVの理想形を実証。 |
+
+#### 2.2.2 PoC実機検証済みリファレンス構成（ベースライン）
+
+初期PoC実機検証（Issue #1〜#8）においてローカル既存環境を基準に動作確認・境界数値を実証したリファレンス構成です。
 
 | Tier | モデル識別名 | 量子化 | VRAM専有 | 推論速度 | 得意タスクとPoC検証成果 |
 | :---: | :--- | :---: | :---: | :---: | :--- |
 | **Tier 1<br>(Primary Ref)** | **`qwen2.5-coder:14b-instruct`** | Q4_K_M | 約 9.0 GB | 約150ms | **標準主軸リファレンス**。<br>論理・コード判定、Multi-Label（分離度10.7pt）、Score期待値（4.25〜1.01点）で最高精度を実証。 |
 | **Tier 2<br>(Fast-Think Ref)** | **`gemma4-12b-it-Q4_K_M:latest`** | Q4_K_M | 約 7.1 GB | 約130ms | **高速判定リファレンス**。<br>Prompt Prefill（空思考タグ事前注入）により思考ループをスキップし、130ms即時判定が可能。 |
-| **Tier 3<br>(Lightweight)** | **`microsoft/deberta-v3-large`** | FP16 | 約 1.2 GB | 約 25ms | **省VRAM特化（将来拡張候補）**。<br>Encoder-Only構造によりVRAM 1GB台で動作。単純テキスト分類専用。 |
+| **Tier 3<br>(Lightweight)** | **`microsoft/deberta-v3-large`** | FP16 | 約 1.2 GB | 約 25ms | **省VRAM特化（PoC候補）**。<br>Encoder-Only構造によりVRAM 1GB台で動作。単純テキスト分類専用。 |
 
 ### 2.3 バックエンド接続仕様
 - **エンドポイント**: `http://localhost:11434/v1/chat/completions` (OpenAI互換 REST API)
