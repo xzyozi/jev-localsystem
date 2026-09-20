@@ -25,10 +25,39 @@
 
 ## ドキュメント一覧
 
-- **基本設計書**: [JEV-BD-001_基本設計書.md](docs/design/JEV-BD-001_基本設計書.md)
-- **設計ガイドライン**: [docs/design/TEMPLATE/README.md](docs/design/TEMPLATE/README.md)
+- **基本設計書**: [JEV-BD-001_基本設計書.md](docs/design/JEV-BD-001_基本設計書.md) (Rev.1.1)
+- **推論判定パイプライン詳細設計書**: [JEV-DD-001_推論判定パイプライン詳細設計書.md](docs/design/JEV-DD-001_推論判定パイプライン詳細設計書.md) (Rev.1.1)
+- **検証方法設計書**: [JEV-TEST-001_検証方法設計書.md](docs/test/JEV-TEST-001_検証方法設計書.md) (Rev.1.1)
 - **Git Flow & ブランチ運用方針**: [docs/setup/git_flow_and_branch_policy.md](docs/setup/git_flow_and_branch_policy.md)
-- **Mermaid CI 検証運用**: [docs/setup/mermaid_ci_validation.md](docs/setup/mermaid_ci_validation.md)
+- **実機検証レポート群**: `docs/logs/` (Issue #1 〜 Issue #9)
+
+---
+
+## 本番推奨モデル階層アーキテクチャ
+
+RTX 3060 12GB 環境下における実機横断ベンチマーク（Issue #9）および包括テストに基づき確定。
+
+| Tier | モデル識別名 | パラメータ / 量子化 | VRAM専有 | 推論速度 | 特徴・実機検証成果 |
+| :---: | :--- | :---: | :---: | :---: | :--- |
+| **Tier 1<br>(Primary / 主軸)** | **`qwen3:8b`** | 8.0B (Q4_K_M) | 約 5.2 GB (100% GPU) | **約 39 ms** | **本番標準主軸エンジン**。<br>・Multi-Label分離度 **36.612pt**（過去最高記録）<br>・空`<think>`タグ注入による即時Logit抽出<br>・日本語ビジネス規程、長文2,000T維持、直列キュー検証済 |
+| **Tier 2<br>(Lightweight / 常駐)** | **`phi4-mini:latest`** | 3.8B (Q4/Q8) | 約 2.5 GB (100% GPU) | **約 39 ms** | **高速常駐ゲートキーパー**。<br>・省VRAM（常時起動で残り9.5GB空き確保）<br>・Multi-Label分離度 **14.656pt**<br>・二値判定（Noul: Yes/No）、高速前処理・仕分け専用 |
+
+---
+
+## 環境構築とテスト実行 (uv 管理)
+
+本プロジェクトは [uv](https://github.com/astral-sh/uv) により依存関係およびテスト環境が厳密に管理されています。
+
+```bash
+# 依存関係の同期（開発依存を含む）
+uv sync --extra dev
+
+# モデル汎用パイプライン包括テストの実行 (全6項目)
+uv run pytest tests/test_model_pipeline.py
+
+# 任意モデルへの動的切り替えテスト実行
+uv run pytest tests/test_model_pipeline.py --model phi4-mini:latest
+```
 
 ---
 
@@ -37,17 +66,17 @@
 ```text
 jev-localsystem/
 ├── docs/
-│   ├── analysis/       # 分析・調査資料
-│   ├── archive/        # アーカイブ
-│   ├── design/         # 仕様書・設計書正本 (SSOT)
-│   │   ├── JEV-BD-001_基本設計書.md
-│   │   └── TEMPLATE/   # 設計書テンプレート群
-│   ├── features/       # 機能仕様書
-│   ├── how-to/         # 実装・操作手順
-│   ├── logs/           # 運用ログ・検証記録
-│   ├── review/         # レビュー記録
-│   ├── setup/          # 環境構築・開発規約
-│   └── test/           # テスト計画・結果
-├── LICENSE
+│   ├── design/         # 仕様書・設計書正本 (JEV-BD-001, JEV-DD-001)
+│   ├── test/           # 検証方法設計書 (JEV-TEST-001)
+│   ├── logs/           # 実機検証レポート & 実測JSONデータ (Issue #1〜#9)
+│   └── setup/          # 環境構築・ブランチ運用規約
+├── scripts/            # 包括検証スクリプトハーネス
+│   ├── verify_model_pipeline_suite.py  # モデル汎用包括検証ハーネス
+│   └── benchmark_model_matrix.py       # 横断モデルベンチマーク
+├── tests/              # Pytest自動テストスイート
+│   ├── conftest.py                     # 動的モデルオプション設定
+│   └── test_model_pipeline.py          # 包括パイプラインテスト (6 passed)
+├── pyproject.toml      # uv プロジェクト定義
+├── uv.lock             # 依存関係ロックファイル
 └── README.md
 ```
