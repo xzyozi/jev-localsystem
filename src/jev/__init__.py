@@ -19,6 +19,7 @@ from jev.exceptions import (
     TokenNotFoundError,
 )
 
+from jev.prompt_builder import PromptBuilder
 from jev.vram_manager import VRAMManager, default_vram_manager
 
 __version__ = "0.1.0"
@@ -40,4 +41,5 @@ __all__ = [
     "BackendConnectionError",
     "VRAMManager",
     "default_vram_manager",
+    "PromptBuilder",
 ]
