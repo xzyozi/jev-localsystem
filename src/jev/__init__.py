@@ -18,7 +18,6 @@ from jev.exceptions import (
     QueueTimeoutError,
     TokenNotFoundError,
 )
-
 from jev.pipeline import JudgePipeline
 from jev.prompt_builder import PromptBuilder
 from jev.result_mapper import ResultMapper

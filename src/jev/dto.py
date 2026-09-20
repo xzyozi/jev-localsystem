@@ -4,6 +4,7 @@
 """
 
 from typing import Any, Dict, List, Literal, Optional
+
 from pydantic import BaseModel, Field, field_validator
 
 TaskType = Literal["noul", "choice", "score", "multilabel"]
@@ -98,7 +99,10 @@ class JudgeResponseDTO(BaseModel):
 
     task_type: TaskType = Field(..., description="リクエストされた判定タスク種別")
     status: JudgeStatus = Field(..., description="判定結果ステータス: 'SUCCESS', 'INCONCLUSIVE', 'ERROR'")
-    verdict: Any = Field(..., description="タスク別の確定判定値（Noul: str, Choice: str, Score: float, Multi-Label: List[str]）")
+    verdict: Any = Field(
+        ...,
+        description="タスク別の確定判定値（Noul: str, Choice: str, Score: float, Multi-Label: List[str]）",
+    )
     latency_ms: float = Field(..., description="パイプライン全体の処理所要時間（ミリ秒）")
     confidence: Optional[float] = Field(default=None, description="判定の確信度 (0.0 〜 1.0)")
     details: Dict[str, Any] = Field(default_factory=dict, description="タスク別詳細計算データ")

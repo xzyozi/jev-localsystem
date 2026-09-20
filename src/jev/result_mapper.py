@@ -9,7 +9,7 @@
 """
 
 import math
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from jev.dto import (
     ChoiceDetails,
@@ -121,7 +121,9 @@ class ResultMapper:
                     latency_ms=round(latency_ms, 2),
                     confidence=0.5,
                     details=details.model_dump(),
-                    error_message="Swap verification inconclusive: conflicting verdicts between original and swapped order",
+                    error_message=(
+                        "Swap verification inconclusive: conflicting verdicts between original and swapped order"
+                    ),
                 )
             else:
                 details = ChoiceDetails(

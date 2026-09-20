@@ -5,10 +5,10 @@
 2. トークン長リミッター契約: Soft 2,000T (警告) / Hard 4,000T (超過時 PayloadTooLargeError)
 """
 
+from contextlib import contextmanager
 import logging
 import sys
 import threading
-from contextlib import contextmanager
 from typing import Generator, Optional
 
 from jev.exceptions import PayloadTooLargeError, QueueTimeoutError

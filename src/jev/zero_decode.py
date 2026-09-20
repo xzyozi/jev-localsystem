@@ -9,6 +9,7 @@ import logging
 import sys
 import time
 from typing import Any, Dict, List, Optional, Tuple
+
 import requests
 
 from jev.exceptions import BackendConnectionError

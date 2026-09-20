@@ -9,7 +9,7 @@
 
 from typing import Dict, List, Optional, Tuple
 
-from jev.dto import JudgeRequestDTO, TaskType
+from jev.dto import JudgeRequestDTO
 
 
 class PromptBuilder:
