@@ -50,5 +50,6 @@ ehthumbs.db
 [Dd]esktop.ini
 .DS_Store
 
-# Logs
+# Logs & Caches
 *.log
+.pytest_cache/

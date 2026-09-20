@@ -1,0 +1,146 @@
+{
+  "model": "qwen3:8b",
+  "timestamp": "2026-09-20 22:31:22",
+  "test_1_position_swap": {
+    "consistency_rate": 80.0,
+    "results": [
+      {
+        "id": "Case_1_Security_Compliance",
+        "consistent": true,
+        "verdict": "C1",
+        "margin_f": 19.910585880273857,
+        "margin_r": 16.655297033576062
+      },
+      {
+        "id": "Case_2_Labor_Law",
+        "consistent": true,
+        "verdict": "C1",
+        "margin_f": 18.971366524696293,
+        "margin_r": 15.168436164523882
+      },
+      {
+        "id": "Case_3_Subtle_Business_Manner",
+        "consistent": true,
+        "verdict": "C1",
+        "margin_f": 3.4603729117661715,
+        "margin_r": 2.924003526568413
+      },
+      {
+        "id": "Case_4_Contract_Legal",
+        "consistent": true,
+        "verdict": "C1",
+        "margin_f": 14.239431738576968,
+        "margin_r": 15.665958280587802
+      },
+      {
+        "id": "Case_5_Subtle_Code_Doc",
+        "consistent": false,
+        "verdict": "INCONCLUSIVE",
+        "margin_f": 6.766490863985382,
+        "margin_r": -0.008544921874999889
+      }
+    ]
+  },
+  "test_2_context_decay": {
+    "all_correct": false,
+    "scales": [
+      {
+        "length_chars": 563,
+        "latency_ms": 297.4,
+        "margin_pt": 19.115,
+        "verdict_correct": true
+      },
+      {
+        "length_chars": 1563,
+        "latency_ms": 501.3,
+        "margin_pt": 13.436,
+        "verdict_correct": true
+      },
+      {
+        "length_chars": 3063,
+        "latency_ms": 3009.0,
+        "margin_pt": 18.664,
+        "verdict_correct": true
+      },
+      {
+        "length_chars": 6063,
+        "latency_ms": 1920.4,
+        "margin_pt": 16.165,
+        "verdict_correct": true
+      },
+      {
+        "length_chars": 12063,
+        "latency_ms": 1887.8,
+        "margin_pt": 0.0,
+        "verdict_correct": false
+      }
+    ]
+  },
+  "test_3_sequential_queue": {
+    "all_success": true,
+    "total_time_ms": 1161.5,
+    "peak_vram": "7412MB / 12288MB",
+    "results": [
+      {
+        "req_id": 1,
+        "wait_ms": 0.003300025127828121,
+        "infer_ms": 731.3368999166414,
+        "success": true
+      },
+      {
+        "req_id": 2,
+        "wait_ms": 731.1289000790566,
+        "infer_ms": 100.97129992209375,
+        "success": true
+      },
+      {
+        "req_id": 3,
+        "wait_ms": 832.1520000463352,
+        "infer_ms": 40.75139993801713,
+        "success": true
+      },
+      {
+        "req_id": 4,
+        "wait_ms": 872.8288999991491,
+        "infer_ms": 42.52829996403307,
+        "success": true
+      },
+      {
+        "req_id": 5,
+        "wait_ms": 915.3581999707967,
+        "infer_ms": 52.400900050997734,
+        "success": true
+      },
+      {
+        "req_id": 6,
+        "wait_ms": 967.7794999442995,
+        "infer_ms": 40.64010002184659,
+        "success": true
+      },
+      {
+        "req_id": 7,
+        "wait_ms": 1008.6086000083014,
+        "infer_ms": 36.99749999213964,
+        "success": true
+      },
+      {
+        "req_id": 8,
+        "wait_ms": 1045.676099951379,
+        "infer_ms": 36.41639999113977,
+        "success": true
+      },
+      {
+        "req_id": 9,
+        "wait_ms": 1082.175499992445,
+        "infer_ms": 39.82419997919351,
+        "success": true
+      },
+      {
+        "req_id": 10,
+        "wait_ms": 1122.0315999817103,
+        "infer_ms": 35.92870000284165,
+        "success": true
+      }
+    ]
+  }
+}
