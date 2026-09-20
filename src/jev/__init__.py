@@ -19,6 +19,8 @@ from jev.exceptions import (
     TokenNotFoundError,
 )
 
+from jev.vram_manager import VRAMManager, default_vram_manager
+
 __version__ = "0.1.0"
 
 __all__ = [
@@ -36,4 +38,6 @@ __all__ = [
     "InconclusiveVerdictError",
     "TokenNotFoundError",
     "BackendConnectionError",
+    "VRAMManager",
+    "default_vram_manager",
 ]
