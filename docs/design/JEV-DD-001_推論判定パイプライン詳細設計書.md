@@ -18,7 +18,7 @@ related_documents:
 | :--- | :--- |
 | 文書番号 | JEV-DD-001 |
 | ドキュメント名 | JEV 推論判定パイプライン詳細設計書 |
-| 版数 | Rev.1.2 (Core具象モジュール実装・DTO拡張・2層APIアーキテクチャ反映) |
+| 版数 | Rev.1.3 (FastAPI REST API サーバー仕様・エンドポイント定義・全25テスト完走反映) |
 | 改訂日 | 2026-09-21 |
 | 作成日 | 2026-09-20 |
 | 作成者 | JEV Architecture Team |
@@ -180,8 +180,22 @@ JEVシステムは、推論コアロジックの再利用性と疎結合性を�
 1. **Core SDK レイヤー (`src/jev/`)**:
    - 外部Webフレームワークに非依存の純粋なPython推論ライブラリ。
    - 他のPythonアプリケーションやエージェントから `from jev import JudgePipeline` で直接インポートして超高速に実行可能。
-2. **Web API アダプターレイヤー (FastAPI / 拡張フェーズ)**:
-   - Core SDK の上位に位置し、外部からの HTTP/JSON リクエスト（`POST /api/v1/noul` 等）を `JudgeRequestDTO` にマッピングしてCoreに委譲する薄いサーバー層。
+2. **Web API アダプターレイヤー (`src/jev/server/` - FastAPI)**:
+   - Core SDK の上位に位置し、外部からの HTTP/JSON リクエストを `JudgeRequestDTO` にマッピングしてCoreに委譲する薄いREST APIサーバー層。
+   - Swagger UI（`/docs`）による対話的ドキュメントおよびスキーマ検証（HTTP 413, 422, 502, 504）を完備。
+
+#### REST API エンドポイント一覧仕様
+
+| メソッド | パス | リクエスト型 | レスポンス型 | 概要と主なユースケース |
+| :--- | :--- | :--- | :--- | :--- |
+| `POST` | `/api/v1/judge` | `JudgeRequestDTO` | `JudgeResponseDTO` | 全タスク統合エントリーポイント |
+| `POST` | `/api/v1/noul` | `NoulRequest` | `JudgeResponseDTO` | 真偽判定（Yes/No、規程チェック等） |
+| `POST` | `/api/v1/choice` | `ChoiceRequest` | `JudgeResponseDTO` | 単一選択（A/Bスワップ位置バイアス相殺付） |
+| `POST` | `/api/v1/score` | `ScoreRequest` | `JudgeResponseDTO` | 段階評価（1〜5の加重連続値期待値） |
+| `POST` | `/api/v1/multilabel` | `MultiLabelRequest` | `JudgeResponseDTO` | 複数ラベル分類（独立Sigmoid判定） |
+| `GET` | `/health` | なし | `HealthResponse` | サーバー死活およびOllama疎通確認 |
+| `GET` | `/api/v1/vram/metrics` | なし | `VRAMMetricsResponse` | 直列セマフォ稼働状況・累計処理件数 |
+| `GET` | `/api/v1/models` | なし | `ModelListResponse` | 本番推奨モデル階層カタログ一覧 |
 
 ### 4.3 パイプライン処理フロー・シーケンス (Mermaid 図)
 
@@ -226,3 +240,4 @@ flowchart TD
 | Rev.1.0 | 2026-09-20 | JEV Architecture Team | 新規作成（全8件の検証実測成果に基づく推論パイプライン・モデル階層・ハードウェア諸元の詳細仕様策定） |
 | Rev.1.1 | 2026-09-20 | JEV Architecture Team | Issue #9 実機横断検証成果反映（本番採用モデル確定: Tier 1 Qwen3:8B, Tier 2 Phi4-mini:latest） |
 | Rev.1.2 | 2026-09-21 | JEV Architecture Team | Core具象モジュール・クラス設計確定、DTOフィールド拡張（model, error_message）、および2層APIアーキテクチャの定義 |
+| Rev.1.3 | 2026-09-21 | JEV Architecture Team | FastAPI REST API サーバー（src/jev/server/）具象実装、全エンドポイント仕様定義、HTTP例外マッピング（413/422/502/504）の反映 |
