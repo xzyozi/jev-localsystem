@@ -26,8 +26,9 @@
 ## ドキュメント一覧
 
 - **基本設計書**: [JEV-BD-001_基本設計書.md](docs/design/JEV-BD-001_基本設計書.md) (Rev.1.1)
-- **推論判定パイプライン詳細設計書**: [JEV-DD-001_推論判定パイプライン詳細設計書.md](docs/design/JEV-DD-001_推論判定パイプライン詳細設計書.md) (Rev.1.1)
+- **推論判定パイプライン詳細設計書**: [JEV-DD-001_推論判定パイプライン詳細設計書.md](docs/design/JEV-DD-001_推論判定パイプライン詳細設計書.md) (Rev.1.3)
 - **検証方法設計書**: [JEV-TEST-001_検証方法設計書.md](docs/test/JEV-TEST-001_検証方法設計書.md) (Rev.1.1)
+- **Git Submodule 連携・他プロジェクト組み込みガイド**: [docs/how-to/git_submodule_integration_guide.md](docs/how-to/git_submodule_integration_guide.md)
 - **Git Flow & ブランチ運用方針**: [docs/setup/git_flow_and_branch_policy.md](docs/setup/git_flow_and_branch_policy.md)
 - **実機検証レポート群**: `docs/logs/` (Issue #1 〜 Issue #9)
 
@@ -106,6 +107,17 @@ uv run jev-server --reload --port 8000
 | `GET` | `/health` | サーバー死活およびOllama疎通確認 |
 | `GET` | `/api/v1/vram/metrics` | 直列セマフォ稼働状況・累計処理件数 |
 | `GET` | `/api/v1/models` | 本番推奨モデル階層カタログ一覧 |
+
+### 3. 他プロジェクトへの組み込み（Git Submodule 方式）
+他リポジトリ（自律エージェントや母艦アプリ等）から JEV を内部モジュールとして組み込んで利用する場合、Git Submodule として配置することで、外部パス依存ゼロ・通信オーバーヘッドゼロで利用できます。
+
+```bash
+# 親プロジェクト側でサブモジュールとして追加
+git submodule add https://github.com/xzyozi/jev-localsystem.git submodules/jev-localsystem
+```
+
+親プロジェクトの `pyproject.toml` に `"jev-localsystem @ file://./submodules/jev-localsystem"` を指定することで、プロセス内関数呼出し（最速 39ms）として直接インポートできます。  
+詳細は [Git Submodule 連携・他プロジェクト組み込みガイド](docs/how-to/git_submodule_integration_guide.md) を参照してください。
 
 ---
 
