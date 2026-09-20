@@ -1,0 +1,32 @@
+{
+  "model": "phi4-mini:latest",
+  "status": "SUCCESS",
+  "latency_ms": {
+    "avg": 39.8,
+    "min": 28.78,
+    "max": 62.42
+  },
+  "token_binding": {
+    "passed": true,
+    "top_tokens": [
+      "A",
+      "B",
+      "Answer",
+      "Yes",
+      "C"
+    ],
+    "logprob_A": -0.0,
+    "logprob_B": -7.954
+  },
+  "multilabel_separation": {
+    "avg_pos_logit": 7.788,
+    "avg_neg_logit": -6.867,
+    "margin_delta_pt": 14.656
+  },
+  "score_calibration": {
+    "monotonic": true,
+    "tier_5_score": 4.337,
+    "tier_3_score": 2.048,
+    "tier_1_score": 1.001
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "model": "qwen3:8b",
+  "status": "SUCCESS",
+  "latency_ms": {
+    "avg": 39.15,
+    "min": 29.69,
+    "max": 48.27
+  },
+  "token_binding": {
+    "passed": true,
+    "top_tokens": [
+      "A",
+      "B",
+      "Answer",
+      "C",
+      "Yes"
+    ],
+    "logprob_A": 0.0,
+    "logprob_B": -25.988
+  },
+  "multilabel_separation": {
+    "avg_pos_logit": 20.289,
+    "avg_neg_logit": -16.323,
+    "margin_delta_pt": 36.612
+  },
+  "score_calibration": {
+    "monotonic": true,
+    "tier_5_score": 4.124,
+    "tier_3_score": 3.466,
+    "tier_1_score": 2.283
+  }
+}
