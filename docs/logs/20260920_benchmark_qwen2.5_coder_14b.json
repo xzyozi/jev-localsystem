@@ -1,0 +1,32 @@
+{
+  "model": "qwen2.5-coder:14b-instruct",
+  "status": "SUCCESS",
+  "latency_ms": {
+    "avg": 145.01,
+    "min": 102.04,
+    "max": 256.25
+  },
+  "token_binding": {
+    "passed": true,
+    "top_tokens": [
+      "A",
+      "B",
+      "C",
+      "Yes",
+      "No"
+    ],
+    "logprob_A": -0.0,
+    "logprob_B": -8.249
+  },
+  "multilabel_separation": {
+    "avg_pos_logit": 4.616,
+    "avg_neg_logit": -2.48,
+    "margin_delta_pt": 7.096
+  },
+  "score_calibration": {
+    "monotonic": true,
+    "tier_5_score": 4.556,
+    "tier_3_score": 2.722,
+    "tier_1_score": 1.003
+  }
+}
