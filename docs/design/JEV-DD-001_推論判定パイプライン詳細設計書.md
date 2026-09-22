@@ -18,9 +18,10 @@ related_documents:
 | :--- | :--- |
 | 文書番号 | JEV-DD-001 |
 | ドキュメント名 | JEV 推論判定パイプライン詳細設計書 |
-| 版数 | Rev.1.3 (FastAPI REST API サーバー仕様・エンドポイント定義・全25テスト完走反映) |
-| 改訂日 | 2026-09-21 |
+| 版数 | Rev.1.4 (Jev互換バッチ評価API・OpenAI互換クラウド推論バックエンド・VRAMバイパス反映) |
+| 改訂日 | 2026-09-22 |
 | 作成日 | 2026-09-20 |
+
 | 作成者 | JEV Architecture Team |
 
 ---
@@ -188,12 +189,13 @@ JEVシステムは、推論コアロジックの再利用性と疎結合性を�
 
 | メソッド | パス | リクエスト型 | レスポンス型 | 概要と主なユースケース |
 | :--- | :--- | :--- | :--- | :--- |
+| `POST` | `/api/v1/evaluate`<br>`/api/evaluate` | `EvaluateRequestDTO` | `EvaluateResponseDTO` | **Jev/OpenJev互換バッチ評価**（複数質問一括判定） |
 | `POST` | `/api/v1/judge` | `JudgeRequestDTO` | `JudgeResponseDTO` | 全タスク統合エントリーポイント |
 | `POST` | `/api/v1/noul` | `NoulRequest` | `JudgeResponseDTO` | 真偽判定（Yes/No、規程チェック等） |
 | `POST` | `/api/v1/choice` | `ChoiceRequest` | `JudgeResponseDTO` | 単一選択（A/Bスワップ位置バイアス相殺付） |
 | `POST` | `/api/v1/score` | `ScoreRequest` | `JudgeResponseDTO` | 段階評価（1〜5の加重連続値期待値） |
 | `POST` | `/api/v1/multilabel` | `MultiLabelRequest` | `JudgeResponseDTO` | 複数ラベル分類（独立Sigmoid判定） |
-| `GET` | `/health` | なし | `HealthResponse` | サーバー死活およびOllama疎通確認 |
+| `GET` | `/health` | なし | `HealthResponse` | サーバー死活およびバックエンド疎通確認 |
 | `GET` | `/api/v1/vram/metrics` | なし | `VRAMMetricsResponse` | 直列セマフォ稼働状況・累計処理件数 |
 | `GET` | `/api/v1/models` | なし | `ModelListResponse` | 本番推奨モデル階層カタログ一覧 |
 
@@ -205,9 +207,10 @@ JEVシステムは、推論コアロジックの再利用性と疎結合性を�
 flowchart TD
     Req["リクエスト受信 (JudgeRequestDTO)"] --> LimitCheck{"トークン長チェック (<= 4,000T)"}
     LimitCheck -->|超過| ErrPayload["PayloadTooLargeError 返却"]
-    LimitCheck -->|正常| QueueLock["VRAM Manager (直列セマフォ獲得)"]
-
-    QueueLock --> PB["PromptBuilder (記号化 & Prefill注入)"]
+    LimitCheck -->|正常| CloudCheck{"クラウド推論判定？"}
+    CloudCheck -->|ローカル| QueueLock["VRAM Manager (直列セマフォ獲得)"]
+    CloudCheck -->|クラウド| PB["PromptBuilder (記号化 & Prefill注入)"]
+    QueueLock --> PB
     PB --> Forward["Zero-Decode Forward (logprobs取得)"]
     Forward --> RM["ResultMapper (空白対数和 & 確率計算)"]
     
@@ -216,8 +219,10 @@ flowchart TD
     SwapBranch -->|なし| PackDTO["JudgeResponseDTO 生成"]
     SwapForward --> PackDTO
 
-    PackDTO --> QueueRelease["VRAM Manager (セマフォ解放)"]
-    QueueRelease --> Res["型安全なレスポンス返却"]
+    PackDTO --> RelCheck{"クラウド推論判定？"}
+    RelCheck -->|ローカル| QueueRelease["VRAM Manager (セマフォ解放)"]
+    RelCheck -->|クラウド| Res["型安全なレスポンス返却"]
+    QueueRelease --> Res
 ```
 
 ---
@@ -226,8 +231,8 @@ flowchart TD
 
 | エラー種別 | 検知条件 | パイプラインの振る舞い | クライアントへの返却 |
 | :--- | :--- | :--- | :--- |
-| **`PayloadTooLargeError`** | コンテキスト長が 4,000トークンを超過 | 推論を実行せず前段で即座に遮断 | `status="ERROR"`, `message="Context exceeds 4,000 tokens"` |
-| **`QueueTimeoutError`** | キュー待機時間が 60秒を超過 | リクエストを破棄しGPUリソースを保護 | `status="ERROR"`, `message="VRAM Queue timeout"` |
+| **`PayloadTooLargeError`** | コンテキスト長が 4,000トークンを超過（ローカル時） | 推論を実行せず前段で即座に遮断 | `status="ERROR"`, `message="Context exceeds 4,000 tokens"` |
+| **`QueueTimeoutError`** | キュー待機時間が 60秒を超過（ローカル時） | リクエストを破棄しGPUリソースを保護 | `status="ERROR"`, `message="VRAM Queue timeout"` |
 | **`InconclusiveVerdict`** | スワップ検証で結果が不一致（Issue #4） | 偽の判定を下さず引き分けとして検知 | `status="INCONCLUSIVE"`, `verdict=None` |
 | **`TokenNotFoundError`** | 対象記号が上位10トークンに不在 | デフォルトの極小値（-20.0）を補完して安全計算 | 計算を継続し、確率0%として処理 |
 
@@ -241,3 +246,5 @@ flowchart TD
 | Rev.1.1 | 2026-09-20 | JEV Architecture Team | Issue #9 実機横断検証成果反映（本番採用モデル確定: Tier 1 Qwen3:8B, Tier 2 Phi4-mini:latest） |
 | Rev.1.2 | 2026-09-21 | JEV Architecture Team | Core具象モジュール・クラス設計確定、DTOフィールド拡張（model, error_message）、および2層APIアーキテクチャの定義 |
 | Rev.1.3 | 2026-09-21 | JEV Architecture Team | FastAPI REST API サーバー（src/jev/server/）具象実装、全エンドポイント仕様定義、HTTP例外マッピング（413/422/502/504）の反映 |
+| Rev.1.4 | 2026-09-22 | JEV Architecture Team | Jev互換バッチ評価API（/api/v1/evaluate & /api/evaluate）、OpenAI互換クラウドZero-Decodeバックエンド抽象化、VRAMセマフォバイパス制御の反映 (Issue #14, #15) |
+
