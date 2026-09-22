@@ -2,6 +2,8 @@
 
 from jev.dto import (
     ChoiceDetails,
+    EvaluateRequestDTO,
+    EvaluateResponseDTO,
     JudgeRequestDTO,
     JudgeResponseDTO,
     JudgeStatus,
@@ -31,6 +33,8 @@ __all__ = [
     "JudgeStatus",
     "JudgeRequestDTO",
     "JudgeResponseDTO",
+    "EvaluateRequestDTO",
+    "EvaluateResponseDTO",
     "NoulDetails",
     "ChoiceDetails",
     "ScoreDetails",

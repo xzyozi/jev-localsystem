@@ -3,7 +3,7 @@
 詳細設計書 (JEV-DD-001) 第3章のインターフェースおよびDTO仕様に基づく型安全なデータモデル。
 """
 
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -107,3 +107,84 @@ class JudgeResponseDTO(BaseModel):
     confidence: Optional[float] = Field(default=None, description="判定の確信度 (0.0 〜 1.0)")
     details: Dict[str, Any] = Field(default_factory=dict, description="タスク別詳細計算データ")
     error_message: Optional[str] = Field(default=None, description="エラー発生時のエラーメッセージ")
+
+
+# =====================================================================
+# TypeSafe Jev / OpenJev 互換バッチ評価用 DTO (Issue #14)
+# =====================================================================
+
+class ChoiceQuestionDTO(BaseModel):
+    """Choice 質問定義 DTO"""
+    type: Literal["choice"]
+    instructions: Optional[str] = Field(default=None, description="判定指示文")
+    criteria: Union[Dict[str, str], List[str]] = Field(..., description="選択肢マッピングまたはラベルリスト")
+
+
+class ScoreQuestionDTO(BaseModel):
+    """Score 質問定義 DTO"""
+    type: Literal["score"]
+    instructions: Optional[str] = Field(default=None, description="判定指示文")
+    criteria: Optional[Union[Dict[str, str], List[str]]] = Field(
+        default=None, description="評価スケール説明またはリスト"
+    )
+
+
+class NoulQuestionDTO(BaseModel):
+    """Noul (真偽) 質問定義 DTO"""
+    type: Literal["noul", "boolean"]
+    instructions: Optional[str] = Field(default=None, description="判定指示文")
+    criteria: Optional[Dict[str, str]] = Field(default=None, description="Yes/Noの補足説明")
+
+
+class MultiLabelQuestionDTO(BaseModel):
+    """Multi-Label 質問定義 DTO (JEV拡張)"""
+    type: Literal["multilabel"]
+    instructions: Optional[str] = Field(default=None, description="判定指示文")
+    criteria: Union[Dict[str, str], List[str]] = Field(..., description="分類対象ラベル群")
+    threshold: float = Field(default=0.5, description="採用判定Sigmoid閾値")
+
+
+BatchQuestionDTO = Union[
+    ChoiceQuestionDTO, ScoreQuestionDTO, NoulQuestionDTO, MultiLabelQuestionDTO
+]
+
+
+class EvaluateRequestDTO(BaseModel):
+    """TypeSafe Jev / OpenJev 互換バッチ評価リクエスト DTO"""
+
+    state: Union[str, Dict[str, Any], List[Any]] = Field(
+        ..., description="判定対象コンテキスト（文字列またはJSONオブジェクト）"
+    )
+    questions: Dict[str, BatchQuestionDTO] = Field(
+        ..., description="質問名をキーとする型付き質問辞書"
+    )
+    model: Optional[str] = Field(
+        default=None, description="モデル識別名（ローカルまたはクラウド）"
+    )
+    base_url: Optional[str] = Field(
+        default=None, description="OpenAI互換BaseURL（クラウド用）"
+    )
+    api_key: Optional[str] = Field(
+        default=None, description="APIキー（クラウド用）"
+    )
+    temperature: float = Field(
+        default=1.0, description="温度パラメータ"
+    )
+    swap_verify: bool = Field(
+        default=False, description="ChoiceタスクでのA/Bスワップ検証有無"
+    )
+
+
+class EvaluateResponseDTO(BaseModel):
+    """TypeSafe Jev / OpenJev 互換バッチ評価レスポンス DTO"""
+
+    model: str = Field(..., description="実行モデル識別名")
+    answers: Dict[str, Any] = Field(..., description="質問名をキーとする判定結果辞書")
+    usage: Dict[str, Optional[int]] = Field(
+        default_factory=lambda: {"input_tokens": None, "output_tokens": None},
+        description="トークン消費量メタ情報",
+    )
+    meta: Dict[str, Any] = Field(
+        default_factory=dict, description="実行モード・レイテンシ等の実行メタ情報"
+    )
+
