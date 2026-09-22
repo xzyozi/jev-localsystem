@@ -7,6 +7,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from jev.dto import EvaluateResponseDTO
 from jev.exceptions import (
     BackendConnectionError,
     InconclusiveVerdictError,
@@ -14,7 +15,8 @@ from jev.exceptions import (
     PayloadTooLargeError,
     QueueTimeoutError,
 )
-from jev.server.api.v1 import judge_router, system_router
+from jev.server.api.v1 import evaluate_router, judge_router, system_router
+from jev.server.api.v1.evaluate import evaluate_batch
 from jev.server.config import settings
 
 logger = logging.getLogger("jev.server")
@@ -93,8 +95,22 @@ def create_app() -> FastAPI:
     # ルーター登録
     app.include_router(judge_router)
     app.include_router(system_router)
+    app.include_router(evaluate_router)
+
+    # TypeSafe Jev / OpenJev エコシステム完全互換用エイリアス
+    app.add_api_route(
+        "/api/evaluate",
+        evaluate_batch,
+        methods=["POST"],
+        response_model=EvaluateResponseDTO,
+        include_in_schema=True,
+        tags=["Compatibility (TypeSafe Jev / OpenJev)"],
+        summary="Jev互換バッチ評価エイリアス (/api/v1/evaluate と同等)",
+        description="TypeSafe Jev / OpenJev のクライアントやUIからそのまま呼び出せる互換用エンドポイントです。",
+    )
 
     return app
+
 
 
 app = create_app()

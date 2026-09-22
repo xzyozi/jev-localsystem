@@ -1,17 +1,17 @@
-import sys
 import os
-import pytest
+import sys
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from scripts.verify_model_pipeline_suite import (
-    run_test_token_and_latency,
-    run_test_position_swap,
-    run_test_multilabel_separation,
     run_test_context_decay,
+    run_test_multilabel_separation,
+    run_test_position_swap,
     run_test_score_calibration,
-    run_test_sequential_queue
+    run_test_sequential_queue,
+    run_test_token_and_latency,
 )
+
 
 def test_token_binding_and_latency(target_model):
     """[Issue #1, #2, #3] 空白対数和、思考抑制Prefill、および単一Forwardレイテンシ(<200ms)の検証"""

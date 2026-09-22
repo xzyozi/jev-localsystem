@@ -99,17 +99,32 @@ uv run jev-server --reload --port 8000
 #### 主要エンドポイント一覧
 | メソッド | パス | 概要 |
 | :--- | :--- | :--- |
+| `POST` | `/api/v1/evaluate`<br>`/api/evaluate` | **【新機能】Jev / OpenJev 完全互換バッチ評価**（1リクエストで複数質問を一括評価） |
 | `POST` | `/api/v1/noul` | 真偽判定（Yes/No、規程適合判定） |
 | `POST` | `/api/v1/choice` | 単一選択（A/Bスワップ位置バイアス相殺付） |
 | `POST` | `/api/v1/score` | 段階評価（1〜5の加重連続値期待値） |
 | `POST` | `/api/v1/multilabel` | 複数ラベル分類（独立Sigmoid判定） |
 | `POST` | `/api/v1/judge` | 全タスク統合エントリーポイント |
-| `GET` | `/health` | サーバー死活およびOllama疎通確認 |
+| `GET` | `/health` | サーバー死活およびバックエンド疎通確認 |
 | `GET` | `/api/v1/vram/metrics` | 直列セマフォ稼働状況・累計処理件数 |
 | `GET` | `/api/v1/models` | 本番推奨モデル階層カタログ一覧 |
 
-### 3. 他プロジェクトへの組み込み（Git Submodule 方式）
+### 3. クラウド LLM による Zero-Decode 推論 (ローカルGPU不要)
+ローカルに GPU（RTX 3060 等）がない環境や CI/CD 環境でも、OpenAI 互換のクラウド Zero-Decode（`logprobs: true, max_tokens: 1`）を利用して超高速判定を実行できます。
+
+```bash
+# 環境変数の設定 (OpenAI / Groq / Cerebras)
+export OPENAI_API_KEY="sk-..."
+# export OPENAI_BASE_URL="https://api.openai.com/v1"  # 任意
+
+# クラウドモデルを指定して実行
+uv run jev-server
+```
+リクエスト時に `model: "gpt-4o-mini"` を指定するか、リクエストボディに `api_key` を含めることで自動的にクラウド推論へルーティングされ、ローカル VRAM 排他ロックが自動バイパスされます。
+
+### 4. 他プロジェクトへの組み込み（Git Submodule 方式）
 他リポジトリ（自律エージェントや母艦アプリ等）から JEV を内部モジュールとして組み込んで利用する場合、Git Submodule として配置することで、外部パス依存ゼロ・通信オーバーヘッドゼロで利用できます。
+
 
 ```bash
 # 親プロジェクト側でサブモジュールとして追加

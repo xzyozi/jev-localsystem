@@ -64,12 +64,19 @@ class VRAMManager:
         # 文字数ベースで保守的に見積もり（日本語中心テキストで約2.5文字/トークン）
         return int(len(text) / 2.5) + 1
 
-    def validate_payload_limits(self, text: str) -> None:
+    def validate_payload_limits(self, text: str, bypass: bool = False) -> None:
         """トークン長および文字数リミッター契約の検証 (Issue #6 実証仕様)
+
+        Args:
+            text: 検証対象テキスト
+            bypass: クラウド推論時等、ローカルGPU制限をバイパスするか (Issue #15)
 
         Raises:
             PayloadTooLargeError: ハードリミット (12,000文字 / 4,000トークン) 超過時
         """
+        if bypass:
+            return
+
         char_len = len(text)
         est_tokens = self.estimate_tokens(text)
 
@@ -91,15 +98,23 @@ class VRAMManager:
             )
 
     @contextmanager
-    def acquire(self, timeout: Optional[float] = None) -> Generator[None, None, None]:
-        """直列実行セマフォを獲得するコンテキストマネージャー (Issue #8 実証仕様)
+    def acquire(
+        self, timeout: Optional[float] = None, bypass: bool = False
+    ) -> Generator[None, None, None]:
+        """直列実行セマフォを獲得するコンテキストマネージャー (Issue #8, #15)
 
         Args:
             timeout: ロック獲得待機タイムアウト秒数。Noneの場合は default_timeout_sec
+            bypass: クラウド推論時等、セマフォ獲得をスキップして即座に実行するか (Issue #15)
 
         Raises:
             QueueTimeoutError: 指定秒数内にロックを獲得できなかった場合
         """
+        if bypass:
+            # クラウド推論時はVRAM枯渇リスクがないため即座にyield
+            yield
+            return
+
         timeout_val = self.default_timeout_sec if timeout is None else timeout
 
         with self._lock:
@@ -127,6 +142,7 @@ class VRAMManager:
             else:
                 with self._lock:
                     self._waiting_count -= 1
+
 
     def get_metrics(self) -> dict:
         """現在のキュー稼働状態メトリクスを取得する"""
