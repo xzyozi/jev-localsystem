@@ -50,34 +50,50 @@ class JudgePipeline:
         self.client = client or ZeroDecodeClient()
         self.vram_manager = vram_manager or default_vram_manager
 
-    def judge(self, request: JudgeRequestDTO) -> JudgeResponseDTO:
+    def _is_cloud_model(self, model_name: str, client: ZeroDecodeClient) -> bool:
+        """指定モデルまたはクライアントがクラウド推論であるかを判定する (Issue #15)"""
+        if client.is_cloud:
+            return True
+        name_lower = model_name.lower()
+        cloud_prefixes = ("gpt-", "o1-", "o3-", "text-embedding", "claude-", "gemini-")
+        return any(name_lower.startswith(p) for p in cloud_prefixes)
+
+    def judge(
+        self,
+        request: JudgeRequestDTO,
+        client: Optional[ZeroDecodeClient] = None,
+    ) -> JudgeResponseDTO:
         """型安全な JudgeRequestDTO を受け取り判定を実行する (メインエントリーポイント)
 
         Args:
             request: 判定リクエストDTO
+            client: オプションの推論クライアント (クラウド動的切替等)
 
         Returns:
             JudgeResponseDTO: 型安全な判定結果DTO
         """
-        # 1. コンテキスト長リミッター契約の事前検証 (JEV-DD-001 2.4)
-        self.vram_manager.validate_payload_limits(request.context_text)
-
-        # モデルの決定
+        active_client = client or self.client
         model_name = request.model or self.default_model
+
+        # クラウド推論かどうかの判定 (Issue #15)
+        is_cloud = self._is_cloud_model(model_name, active_client)
+
+        # 1. コンテキスト長リミッター契約の事前検証 (クラウド時はバイパス)
+        self.vram_manager.validate_payload_limits(request.context_text, bypass=is_cloud)
 
         t_start = time.perf_counter()
 
-        # 2. VRAM Manager による直列実行ロックの獲得 (JEV-DD-001 2.4, Issue #8)
+        # 2. VRAM Manager による直列実行ロック (クラウド時はバイパス)
         try:
-            with self.vram_manager.acquire():
+            with self.vram_manager.acquire(bypass=is_cloud):
                 if request.task_type == "noul":
-                    return self._execute_noul(request, model_name, t_start)
+                    return self._execute_noul(request, model_name, t_start, active_client)
                 elif request.task_type == "choice":
-                    return self._execute_choice(request, model_name, t_start)
+                    return self._execute_choice(request, model_name, t_start, active_client)
                 elif request.task_type == "score":
-                    return self._execute_score(request, model_name, t_start)
+                    return self._execute_score(request, model_name, t_start, active_client)
                 elif request.task_type == "multilabel":
-                    return self._execute_multilabel(request, model_name, t_start)
+                    return self._execute_multilabel(request, model_name, t_start, active_client)
                 else:
                     raise ValueError(f"Unknown task_type: {request.task_type}")
 
@@ -94,16 +110,20 @@ class JudgePipeline:
                 error_message=str(e),
             )
 
-    def _execute_noul(self, request: JudgeRequestDTO, model_name: str, t_start: float) -> JudgeResponseDTO:
+    def _execute_noul(
+        self, request: JudgeRequestDTO, model_name: str, t_start: float, client: ZeroDecodeClient
+    ) -> JudgeResponseDTO:
         messages, _, _ = PromptBuilder.build_messages(request, model_name)
-        logprobs, _ = self.client.forward(model_name, messages)
+        logprobs, _ = client.forward(model_name, messages)
         total_latency = (time.perf_counter() - t_start) * 1000.0
         return ResultMapper.map_noul(logprobs, total_latency)
 
-    def _execute_choice(self, request: JudgeRequestDTO, model_name: str, t_start: float) -> JudgeResponseDTO:
+    def _execute_choice(
+        self, request: JudgeRequestDTO, model_name: str, t_start: float, client: ZeroDecodeClient
+    ) -> JudgeResponseDTO:
         # 1. 通常 Forward
         messages_fwd, _, symbol_map_fwd = PromptBuilder.build_messages(request, model_name, swap=False)
-        logprobs_fwd, _ = self.client.forward(model_name, messages_fwd)
+        logprobs_fwd, _ = client.forward(model_name, messages_fwd)
 
         logprobs_swap = None
         symbol_map_swap = None
@@ -111,7 +131,7 @@ class JudgePipeline:
         # 2. A/Bスワップ検証 (Issue #4 仕様)
         if request.swap_verify and len(request.labels) >= 2:
             messages_swap, _, symbol_map_swap = PromptBuilder.build_messages(request, model_name, swap=True)
-            logprobs_swap, _ = self.client.forward(model_name, messages_swap)
+            logprobs_swap, _ = client.forward(model_name, messages_swap)
 
         total_latency = (time.perf_counter() - t_start) * 1000.0
         return ResultMapper.map_choice(
@@ -122,13 +142,17 @@ class JudgePipeline:
             symbol_map_swap=symbol_map_swap,
         )
 
-    def _execute_score(self, request: JudgeRequestDTO, model_name: str, t_start: float) -> JudgeResponseDTO:
+    def _execute_score(
+        self, request: JudgeRequestDTO, model_name: str, t_start: float, client: ZeroDecodeClient
+    ) -> JudgeResponseDTO:
         messages, _, _ = PromptBuilder.build_messages(request, model_name)
-        logprobs, _ = self.client.forward(model_name, messages)
+        logprobs, _ = client.forward(model_name, messages)
         total_latency = (time.perf_counter() - t_start) * 1000.0
         return ResultMapper.map_score(logprobs, total_latency, temperature=request.temperature)
 
-    def _execute_multilabel(self, request: JudgeRequestDTO, model_name: str, t_start: float) -> JudgeResponseDTO:
+    def _execute_multilabel(
+        self, request: JudgeRequestDTO, model_name: str, t_start: float, client: ZeroDecodeClient
+    ) -> JudgeResponseDTO:
         labels = request.labels
         if not labels:
             raise ValueError("Multi-Label task requires non-empty request.labels")
@@ -136,11 +160,12 @@ class JudgePipeline:
         label_results = []
         for lbl in labels:
             messages, _, _ = PromptBuilder.build_messages(request, model_name, single_label_target=lbl)
-            logprobs, _ = self.client.forward(model_name, messages)
+            logprobs, _ = client.forward(model_name, messages)
             label_results.append((lbl, logprobs))
 
         total_latency = (time.perf_counter() - t_start) * 1000.0
         return ResultMapper.map_multilabel(label_results, total_latency, threshold=0.5)
+
 
     # ==========================================
     # ヘルパーショートカットメソッド
@@ -151,6 +176,7 @@ class JudgePipeline:
         context_text: str,
         rule_definition: str = "",
         model: Optional[str] = None,
+        client: Optional[ZeroDecodeClient] = None,
     ) -> JudgeResponseDTO:
         """Noul (真偽判定) のショートカットメソッド"""
         req = JudgeRequestDTO(
@@ -159,7 +185,7 @@ class JudgePipeline:
             rule_definition=rule_definition,
             model=model,
         )
-        return self.judge(req)
+        return self.judge(req, client=client)
 
     def judge_choice(
         self,
@@ -168,6 +194,7 @@ class JudgePipeline:
         rule_definition: str = "",
         swap_verify: bool = False,
         model: Optional[str] = None,
+        client: Optional[ZeroDecodeClient] = None,
     ) -> JudgeResponseDTO:
         """Choice (単一選択) のショートカットメソッド"""
         req = JudgeRequestDTO(
@@ -178,7 +205,7 @@ class JudgePipeline:
             swap_verify=swap_verify,
             model=model,
         )
-        return self.judge(req)
+        return self.judge(req, client=client)
 
     def judge_score(
         self,
@@ -186,6 +213,7 @@ class JudgePipeline:
         rule_definition: str = "",
         temperature: float = 1.0,
         model: Optional[str] = None,
+        client: Optional[ZeroDecodeClient] = None,
     ) -> JudgeResponseDTO:
         """Score (段階評価) のショートカットメソッド"""
         req = JudgeRequestDTO(
@@ -195,7 +223,7 @@ class JudgePipeline:
             temperature=temperature,
             model=model,
         )
-        return self.judge(req)
+        return self.judge(req, client=client)
 
     def judge_multilabel(
         self,
@@ -203,6 +231,7 @@ class JudgePipeline:
         labels: List[str],
         rule_definition: str = "",
         model: Optional[str] = None,
+        client: Optional[ZeroDecodeClient] = None,
     ) -> JudgeResponseDTO:
         """Multi-Label (複数選択) のショートカットメソッド"""
         req = JudgeRequestDTO(
@@ -212,4 +241,5 @@ class JudgePipeline:
             rule_definition=rule_definition,
             model=model,
         )
-        return self.judge(req)
+        return self.judge(req, client=client)
+

@@ -19,6 +19,7 @@ from jev.dto import (
     ScoreQuestionDTO,
 )
 from jev.server.api.v1.judge import get_pipeline
+from jev.zero_decode import OpenAIBackend, ZeroDecodeClient
 
 router = APIRouter(tags=["JEV Batch Evaluation"])
 
@@ -28,6 +29,21 @@ def _format_state(state: Any) -> str:
     if isinstance(state, str):
         return state
     return json.dumps(state, ensure_ascii=False, indent=2)
+
+
+def _resolve_client(request: EvaluateRequestDTO) -> ZeroDecodeClient | None:
+    """リクエスト情報から明示的なクラウドクライアントが必要かを判定・構築する (Issue #15)"""
+    model_lower = (request.model or "").lower()
+    is_cloud_model = any(
+        model_lower.startswith(p)
+        for p in ("gpt-", "o1-", "o3-", "text-embedding", "claude-", "gemini-")
+    )
+
+    # api_key または base_url が明示指定されたか、モデル名がクラウドプレフィックスの場合
+    if request.api_key or request.base_url or is_cloud_model:
+        backend = OpenAIBackend(api_key=request.api_key, base_url=request.base_url)
+        return ZeroDecodeClient(backend=backend)
+    return None
 
 
 @router.post(
@@ -45,10 +61,14 @@ def evaluate_batch(
     state_str = _format_state(request.state)
     target_model = request.model or pipeline.default_model
 
+    # クラウドクライアントの動的解決 (Issue #15)
+    custom_client = _resolve_client(request)
+
     answers: Dict[str, Any] = {}
 
     for q_name, q in request.questions.items():
         instructions = q.instructions or ""
+
 
         if isinstance(q, ChoiceQuestionDTO):
             # labels の抽出
@@ -68,6 +88,7 @@ def evaluate_batch(
                 rule_definition=rule_desc,
                 swap_verify=request.swap_verify,
                 model=target_model,
+                client=custom_client,
             )
 
             probabilities = res.details.get("probabilities", {})
@@ -94,6 +115,7 @@ def evaluate_batch(
                 rule_definition=rule_desc,
                 temperature=request.temperature,
                 model=target_model,
+                client=custom_client,
             )
 
             distribution = res.details.get("distribution", {})
@@ -113,11 +135,11 @@ def evaluate_batch(
                 no_desc = q.criteria.get("false", "")
                 rule_desc = f"{instructions}\n(Yes: {yes_desc}, No: {no_desc})".strip()
 
-
             res = pipeline.judge_noul(
                 context_text=state_str,
                 rule_definition=rule_desc,
                 model=target_model,
+                client=custom_client,
             )
 
             p_yes = res.details.get("prob_yes", 0.5)
@@ -144,7 +166,9 @@ def evaluate_batch(
                 labels=labels,
                 rule_definition=rule_desc,
                 model=target_model,
+                client=custom_client,
             )
+
 
             answers[q_name] = {
                 "type": "multilabel",
