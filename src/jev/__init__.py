@@ -24,7 +24,12 @@ from jev.pipeline import JudgePipeline
 from jev.prompt_builder import PromptBuilder
 from jev.result_mapper import ResultMapper
 from jev.vram_manager import VRAMManager, default_vram_manager
-from jev.zero_decode import ZeroDecodeClient
+from jev.zero_decode import (
+    InferenceBackend,
+    OllamaBackend,
+    OpenAIBackend,
+    ZeroDecodeClient,
+)
 
 __version__ = "0.1.0"
 
@@ -48,7 +53,11 @@ __all__ = [
     "VRAMManager",
     "default_vram_manager",
     "PromptBuilder",
+    "InferenceBackend",
+    "OllamaBackend",
+    "OpenAIBackend",
     "ZeroDecodeClient",
     "ResultMapper",
+
     "JudgePipeline",
 ]
