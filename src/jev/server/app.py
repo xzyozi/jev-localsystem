@@ -54,7 +54,7 @@ def create_app() -> FastAPI:
     # ==========================================
 
     @app.exception_handler(PayloadTooLargeError)
-    async def payload_too_large_handler(request: Request, exc: PayloadTooLargeError):
+    async def payload_too_large_handler(request: Request, exc: PayloadTooLargeError) -> JSONResponse:
         logger.warning("HTTP 413 Payload Too Large: %s", exc.message)
         return JSONResponse(
             status_code=413,
@@ -62,7 +62,7 @@ def create_app() -> FastAPI:
         )
 
     @app.exception_handler(QueueTimeoutError)
-    async def queue_timeout_handler(request: Request, exc: QueueTimeoutError):
+    async def queue_timeout_handler(request: Request, exc: QueueTimeoutError) -> JSONResponse:
         logger.error("HTTP 504 Gateway Timeout: %s", exc.message)
         return JSONResponse(
             status_code=504,
@@ -70,7 +70,7 @@ def create_app() -> FastAPI:
         )
 
     @app.exception_handler(BackendConnectionError)
-    async def backend_connection_handler(request: Request, exc: BackendConnectionError):
+    async def backend_connection_handler(request: Request, exc: BackendConnectionError) -> JSONResponse:
         logger.error("HTTP 502 Bad Gateway: %s", exc.message)
         return JSONResponse(
             status_code=502,
@@ -78,14 +78,14 @@ def create_app() -> FastAPI:
         )
 
     @app.exception_handler(InconclusiveVerdictError)
-    async def inconclusive_handler(request: Request, exc: InconclusiveVerdictError):
+    async def inconclusive_handler(request: Request, exc: InconclusiveVerdictError) -> JSONResponse:
         return JSONResponse(
             status_code=422,
             content={"detail": exc.message, "error_type": "InconclusiveVerdictError"},
         )
 
     @app.exception_handler(JevError)
-    async def jev_base_handler(request: Request, exc: JevError):
+    async def jev_base_handler(request: Request, exc: JevError) -> JSONResponse:
         logger.error("HTTP %d JevError: %s", exc.status_code, exc.message)
         return JSONResponse(
             status_code=exc.status_code,

@@ -7,7 +7,7 @@ import uvicorn
 from jev.server.config import settings
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="JEV REST API サーバー起動CLI")
     parser.add_argument(
         "--host",
@@ -28,7 +28,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def main():
+def main() -> None:
     args = parse_args()
     print("==================================================")
     print("      JEV: Judge & Evaluation REST API Server     ")

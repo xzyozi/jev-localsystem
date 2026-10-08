@@ -5,7 +5,7 @@
 
 from typing import Any, Dict, List, Literal, Optional, Union
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
 TaskType = Literal["noul", "choice", "score", "multilabel"]
 JudgeStatus = Literal["SUCCESS", "INCONCLUSIVE", "ERROR"]
@@ -52,7 +52,7 @@ class JudgeRequestDTO(BaseModel):
 
     @field_validator("labels")
     @classmethod
-    def validate_labels(cls, v: List[str], info) -> List[str]:
+    def validate_labels(cls, v: List[str], info: ValidationInfo) -> List[str]:
         # choice や multilabel タスクでは labels の指定が推奨される
         task = info.data.get("task_type")
         if task in ("choice", "multilabel") and len(v) == 0:
@@ -175,13 +175,18 @@ class EvaluateRequestDTO(BaseModel):
     )
 
 
+def _empty_usage() -> Dict[str, Optional[int]]:
+    """usage の既定値（トークン数は未計測のため None）"""
+    return {"input_tokens": None, "output_tokens": None}
+
+
 class EvaluateResponseDTO(BaseModel):
     """TypeSafe Jev / OpenJev 互換バッチ評価レスポンス DTO"""
 
     model: str = Field(..., description="実行モデル識別名")
     answers: Dict[str, Any] = Field(..., description="質問名をキーとする判定結果辞書")
     usage: Dict[str, Optional[int]] = Field(
-        default_factory=lambda: {"input_tokens": None, "output_tokens": None},
+        default_factory=_empty_usage,
         description="トークン消費量メタ情報",
     )
     meta: Dict[str, Any] = Field(
