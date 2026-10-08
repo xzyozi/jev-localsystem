@@ -19,7 +19,7 @@ from jev.dto import (
     ScoreQuestionDTO,
 )
 from jev.server.api.v1.judge import get_pipeline
-from jev.zero_decode import OpenAIBackend, ZeroDecodeClient
+from jev.zero_decode import OpenAIBackend, ZeroDecodeClient, is_cloud_model_name
 
 router = APIRouter(tags=["JEV Batch Evaluation"])
 
@@ -33,14 +33,9 @@ def _format_state(state: Any) -> str:
 
 def _resolve_client(request: EvaluateRequestDTO) -> ZeroDecodeClient | None:
     """リクエスト情報から明示的なクラウドクライアントが必要かを判定・構築する (Issue #15)"""
-    model_lower = (request.model or "").lower()
-    is_cloud_model = any(
-        model_lower.startswith(p)
-        for p in ("gpt-", "o1-", "o3-", "text-embedding", "claude-", "gemini-")
-    )
-
-    # api_key または base_url が明示指定されたか、モデル名がクラウドプレフィックスの場合
-    if request.api_key or request.base_url or is_cloud_model:
+    # api_key または base_url が明示指定されたか、モデル名がクラウド API の識別名らしい場合
+    # (Ollama の name:tag 形式はクラウドとみなさない)
+    if request.api_key or request.base_url or is_cloud_model_name(request.model):
         backend = OpenAIBackend(api_key=request.api_key, base_url=request.base_url)
         return ZeroDecodeClient(backend=backend)
     return None

@@ -50,14 +50,6 @@ class JudgePipeline:
         self.client = client or ZeroDecodeClient()
         self.vram_manager = vram_manager or default_vram_manager
 
-    def _is_cloud_model(self, model_name: str, client: ZeroDecodeClient) -> bool:
-        """指定モデルまたはクライアントがクラウド推論であるかを判定する (Issue #15)"""
-        if client.is_cloud:
-            return True
-        name_lower = model_name.lower()
-        cloud_prefixes = ("gpt-", "o1-", "o3-", "text-embedding", "claude-", "gemini-")
-        return any(name_lower.startswith(p) for p in cloud_prefixes)
-
     def judge(
         self,
         request: JudgeRequestDTO,
@@ -75,8 +67,9 @@ class JudgePipeline:
         active_client = client or self.client
         model_name = request.model or self.default_model
 
-        # クラウド推論かどうかの判定 (Issue #15)
-        is_cloud = self._is_cloud_model(model_name, active_client)
+        # クラウド推論かどうかは、実際に使うバックエンドで決める (Issue #15, #20)。
+        # モデル名からは推測しない（ローカルの gpt-oss:20b 等で VRAM 保護が外れるため）。
+        is_cloud = active_client.is_cloud
 
         # 1. コンテキスト長リミッター契約の事前検証 (クラウド時はバイパス)
         self.vram_manager.validate_payload_limits(request.context_text, bypass=is_cloud)
