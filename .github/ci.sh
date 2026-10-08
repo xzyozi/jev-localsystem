@@ -29,6 +29,7 @@ echo "=== pytest (Ollama 不要のテストのみ) ==="
 uv run pytest -p no:cacheprovider \
   tests/test_target_token_mass.py \
   tests/test_request_params.py \
+  tests/test_cloud_detection.py \
   tests/test_api_request_params.py \
   tests/test_cloud_backend.py \
   tests/test_cloud_pipeline.py \
