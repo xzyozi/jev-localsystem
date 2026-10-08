@@ -93,6 +93,7 @@ def evaluate_batch(
                 "confidence": res.confidence,
                 "probabilities": probabilities,
                 "status": res.status,
+                "error_message": res.error_message,
             }
 
         elif isinstance(q, ScoreQuestionDTO):
@@ -122,6 +123,7 @@ def evaluate_batch(
                 "legend": distribution,
                 "probabilities": distribution,
                 "status": res.status,
+                "error_message": res.error_message,
             }
 
         elif isinstance(q, NoulQuestionDTO):
@@ -138,14 +140,17 @@ def evaluate_batch(
                 client=custom_client,
             )
 
-            p_yes = res.details.get("prob_yes", 0.5)
+            # ERROR / INCONCLUSIVE のときは中立値(0.5)を作らず、null で返す (Issue #21)
+            ok = res.status == "SUCCESS"
+            p_yes = res.details.get("prob_yes") if ok else None
             answers[q_name] = {
                 "type": "noul",
-                "noul": round(p_yes, 4),
+                "noul": round(p_yes, 4) if p_yes is not None else None,
                 "verdict": res.verdict,
                 "confidence": res.confidence,
-                "margin": res.details.get("margin", 0.0),
+                "margin": res.details.get("margin") if ok else None,
                 "status": res.status,
+                "error_message": res.error_message,
             }
 
         elif isinstance(q, MultiLabelQuestionDTO):
@@ -174,6 +179,7 @@ def evaluate_batch(
                 "probabilities": res.details.get("probabilities", {}),
                 "margins": res.details.get("margins", {}),
                 "status": res.status,
+                "error_message": res.error_message,
             }
 
     total_latency_ms = (time.perf_counter() - t_start) * 1000.0
