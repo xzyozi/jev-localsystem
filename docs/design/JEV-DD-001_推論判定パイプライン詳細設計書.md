@@ -18,7 +18,7 @@ related_documents:
 | :--- | :--- |
 | 文書番号 | JEV-DD-001 |
 | ドキュメント名 | JEV 推論判定パイプライン詳細設計書 |
-| 版数 | Rev.1.5 (対象トークン確率質量チェックによる INCONCLUSIVE 判定を追加) |
+| 版数 | Rev.1.6 (リクエスト指定値の検証・反映: Choice件数検証・threshold/offset・Score段数) |
 | 改訂日 | 2026-10-08 |
 | 作成日 | 2026-09-20 |
 
@@ -100,9 +100,12 @@ related_documents:
 | `task_type` | `str` | 必須 | - | `"noul"`, `"choice"`, `"score"`, `"multilabel"` のいずれか |
 | `context_text` | `str` | 必須 | - | 判定対象テキスト（最大4,000トークン / 12,000文字以内） |
 | `rule_definition` | `str` | 任意 | `""` | 動的注入するルール・基準（RAGチャンクや判定要件） |
-| `labels` | `List[str]` | 任意 | `[]` | 選択肢または分類対象ラベル名リスト |
+| `labels` | `List[str]` | 任意 | `[]` | 選択肢または分類対象ラベル名リスト（Choice は2〜8件、Multi-Label は1件以上。範囲外は検証エラー） |
 | `swap_verify` | `bool` | 任意 | `False` | 位置バイアス相殺のためのスワップ推論（2回実行）を行うか |
 | `temperature` | `float` | 任意 | `1.0` | Scoreタスク等の確率平滑化温度パラメータ（>0.0） |
+| `score_levels` | `int` | 任意 | `5` | Scoreタスクの段数（2〜9）。評価値は 1〜この値。`/evaluate` では `criteria` の件数が段数になる |
+| `threshold` | `float` | 任意 | `0.5` | Multi-Labelでラベルを採用するSigmoid確率の閾値（0.0〜1.0） |
+| `offset` | `float` | 任意 | `0.0` | Multi-LabelでYes-NoのLogit差分に加えるオフセット |
 | `model` | `Optional[str]` | 任意 | `None` | 指定モデル識別名（省略時はTier 1主軸モデル `qwen3:8b`） |
 
 ### 3.2 共通レスポンス DTO (`JudgeResponseDTO`)
@@ -248,4 +251,5 @@ flowchart TD
 | Rev.1.3 | 2026-09-21 | JEV Architecture Team | FastAPI REST API サーバー（src/jev/server/）具象実装、全エンドポイント仕様定義、HTTP例外マッピング（413/422/502/504）の反映 |
 | Rev.1.4 | 2026-09-22 | JEV Architecture Team | Jev互換バッチ評価API（/api/v1/evaluate & /api/evaluate）、OpenAI互換クラウドZero-Decodeバックエンド抽象化、VRAMセマフォバイパス制御の反映 (Issue #14, #15) |
 | Rev.1.5 | 2026-10-08 | JEV Architecture Team | 対象トークン確率質量チェックの追加。Yes/No・選択肢記号・1〜5 が Top-Logprobs に現れない場合、偽の SUCCESS（0.5 等）ではなく INCONCLUSIVE を返す契約へ変更（DTOスキーマ変更なし） |
+| Rev.1.6 | 2026-10-08 | JEV Architecture Team | リクエスト指定値の検証・反映（Issue #19）。Choice 選択肢数の検証（2〜8）、Multi-Label の threshold/offset 反映、Score 段数（score_levels）の動的化。いずれも既定値は従来どおり（後方互換） |
 
