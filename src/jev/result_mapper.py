@@ -227,12 +227,16 @@ class ResultMapper:
         latency_ms: float,
         temperature: float = 1.0,
         min_target_mass: Optional[float] = None,
+        levels: int = 5,
     ) -> JudgeResponseDTO:
         """Score (段階評価) 確率加重平均による連続値期待値キャリブレーション (Issue #7)
 
-        '1'〜'5' の確率質量が下限未満の場合は SUCCESS とせず INCONCLUSIVE を返す。
+        '1'〜str(levels) の確率質量が下限未満の場合は SUCCESS とせず INCONCLUSIVE を返す。
+
+        Args:
+            levels: 段数（既定 5）。評価値は 1〜levels の範囲になる
         """
-        scales = ["1", "2", "3", "4", "5"]
+        scales = [str(i) for i in range(1, levels + 1)]
         target_mass = cls.get_target_mass(logprobs, scales)
 
         # 温度パラメータを適用した確率計算
@@ -267,7 +271,7 @@ class ResultMapper:
                 latency_ms=round(latency_ms, 2),
                 confidence=None,
                 details=details.model_dump(),
-                error_message=cls._low_mass_message(f"1-5 mass={target_mass:.4g}", min_mass),
+                error_message=cls._low_mass_message(f"1-{levels} mass={target_mass:.4g}", min_mass),
             )
 
         return JudgeResponseDTO(

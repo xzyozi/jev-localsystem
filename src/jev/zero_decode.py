@@ -51,6 +51,24 @@ def _parse_logprobs(response_data: Dict[str, Any]) -> Dict[str, float]:
     return result
 
 
+# クラウド API のモデル識別名に使われる接頭辞（/evaluate がバックエンドを自動選択する際の目安）
+CLOUD_MODEL_PREFIXES = ("gpt-", "o1-", "o3-", "text-embedding", "claude-", "gemini-")
+
+
+def is_cloud_model_name(model_name: Optional[str]) -> bool:
+    """モデル名がクラウド API のモデル識別名らしいかを判定する。
+
+    Ollama のローカルモデルは ``name:tag`` 形式（例: ``gpt-oss:20b``）で、クラウド API の識別名には
+    ``:`` が含まれないため、``:`` を含む名前はクラウドとみなさない。
+    この判定はバックエンド自動選択の目安であり、VRAM 保護のバイパス可否には使わない
+    （それは実際に使うバックエンドの ``is_cloud`` で決まる）。
+    """
+    name = (model_name or "").lower()
+    if ":" in name:
+        return False
+    return name.startswith(CLOUD_MODEL_PREFIXES)
+
+
 class InferenceBackend(ABC):
     """Zero-Decode 推論バックエンド抽象基底クラス (Issue #15)"""
 

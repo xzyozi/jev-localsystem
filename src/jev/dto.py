@@ -5,10 +5,18 @@
 
 from typing import Any, Dict, List, Literal, Optional, Union
 
-from pydantic import BaseModel, Field, ValidationInfo, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 TaskType = Literal["noul", "choice", "score", "multilabel"]
 JudgeStatus = Literal["SUCCESS", "INCONCLUSIVE", "ERROR"]
+
+# Choice で使える選択肢の最大数（記号 A〜H。PromptBuilder.CHOICE_SYMBOLS と一致させる）
+MAX_CHOICE_LABELS = 8
+MIN_CHOICE_LABELS = 2
+# Score の段数の範囲（評価値は単一トークンの数字 '1'〜'9' で表現する）
+MIN_SCORE_LEVELS = 2
+MAX_SCORE_LEVELS = 9
+DEFAULT_SCORE_LEVELS = 5
 
 
 class JudgeRequestDTO(BaseModel):
@@ -42,6 +50,22 @@ class JudgeRequestDTO(BaseModel):
         default=None,
         description="推論に使用するモデル識別名。省略時はパイプラインのデフォルト（Tier 1: qwen3:8b）",
     )
+    score_levels: int = Field(
+        default=DEFAULT_SCORE_LEVELS,
+        ge=MIN_SCORE_LEVELS,
+        le=MAX_SCORE_LEVELS,
+        description="Scoreタスクの段数（2〜9）。評価値は1〜この値の範囲になる",
+    )
+    threshold: float = Field(
+        default=0.5,
+        ge=0.0,
+        le=1.0,
+        description="Multi-Labelタスクでラベルを採用するSigmoid確率の閾値",
+    )
+    offset: float = Field(
+        default=0.0,
+        description="Multi-LabelタスクでYes-NoのLogit差分に加えるオフセット",
+    )
 
     @field_validator("temperature")
     @classmethod
@@ -50,15 +74,17 @@ class JudgeRequestDTO(BaseModel):
             raise ValueError("temperature must be strictly greater than 0.0")
         return v
 
-    @field_validator("labels")
-    @classmethod
-    def validate_labels(cls, v: List[str], info: ValidationInfo) -> List[str]:
-        # choice や multilabel タスクでは labels の指定が推奨される
-        task = info.data.get("task_type")
-        if task in ("choice", "multilabel") and len(v) == 0:
-            # バリデーションエラーにはせず、デフォルトラベルを後段で補完可能にするか、ここで空リストを許容
-            pass
-        return v
+    @model_validator(mode="after")
+    def validate_labels_for_task(self) -> "JudgeRequestDTO":
+        """タスク種別ごとの labels 件数を検証する（黙った切り捨て・後段での ERROR 化を防ぐ）"""
+        count = len(self.labels)
+        if self.task_type == "choice" and not MIN_CHOICE_LABELS <= count <= MAX_CHOICE_LABELS:
+            raise ValueError(
+                f"choice task requires {MIN_CHOICE_LABELS} to {MAX_CHOICE_LABELS} labels (got {count})"
+            )
+        if self.task_type == "multilabel" and count == 0:
+            raise ValueError("multilabel task requires at least 1 label")
+        return self
 
 
 class NoulDetails(BaseModel):
@@ -119,14 +145,38 @@ class ChoiceQuestionDTO(BaseModel):
     instructions: Optional[str] = Field(default=None, description="判定指示文")
     criteria: Union[Dict[str, str], List[str]] = Field(..., description="選択肢マッピングまたはラベルリスト")
 
+    @field_validator("criteria")
+    @classmethod
+    def validate_criteria_size(cls, v: Union[Dict[str, str], List[str]]) -> Union[Dict[str, str], List[str]]:
+        if not MIN_CHOICE_LABELS <= len(v) <= MAX_CHOICE_LABELS:
+            raise ValueError(
+                f"choice criteria must have {MIN_CHOICE_LABELS} to {MAX_CHOICE_LABELS} options (got {len(v)})"
+            )
+        return v
+
 
 class ScoreQuestionDTO(BaseModel):
     """Score 質問定義 DTO"""
     type: Literal["score"]
     instructions: Optional[str] = Field(default=None, description="判定指示文")
     criteria: Optional[Union[Dict[str, str], List[str]]] = Field(
-        default=None, description="評価スケール説明またはリスト"
+        default=None, description="評価スケール説明またはリスト。指定した場合、その件数が段数になる（2〜9）"
     )
+
+    @field_validator("criteria")
+    @classmethod
+    def validate_criteria_size(
+        cls, v: Optional[Union[Dict[str, str], List[str]]]
+    ) -> Optional[Union[Dict[str, str], List[str]]]:
+        # 未指定・空は既定の5段階として扱う
+        if v and not MIN_SCORE_LEVELS <= len(v) <= MAX_SCORE_LEVELS:
+            raise ValueError(f"score criteria must have {MIN_SCORE_LEVELS} to {MAX_SCORE_LEVELS} levels (got {len(v)})")
+        return v
+
+    @property
+    def levels(self) -> int:
+        """段数。criteria 未指定・空の場合は既定値"""
+        return len(self.criteria) if self.criteria else DEFAULT_SCORE_LEVELS
 
 
 class NoulQuestionDTO(BaseModel):
@@ -141,7 +191,14 @@ class MultiLabelQuestionDTO(BaseModel):
     type: Literal["multilabel"]
     instructions: Optional[str] = Field(default=None, description="判定指示文")
     criteria: Union[Dict[str, str], List[str]] = Field(..., description="分類対象ラベル群")
-    threshold: float = Field(default=0.5, description="採用判定Sigmoid閾値")
+    threshold: float = Field(default=0.5, ge=0.0, le=1.0, description="採用判定Sigmoid閾値")
+
+    @field_validator("criteria")
+    @classmethod
+    def validate_criteria_not_empty(cls, v: Union[Dict[str, str], List[str]]) -> Union[Dict[str, str], List[str]]:
+        if len(v) == 0:
+            raise ValueError("multilabel criteria must have at least 1 label")
+        return v
 
 
 BatchQuestionDTO = Union[

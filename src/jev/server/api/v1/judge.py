@@ -91,5 +91,6 @@ def execute_multilabel(
         labels=request.labels,
         rule_definition=request.rule_definition,
         model=request.model,
+        threshold=request.threshold,
     )
     return pipeline.judge(req)

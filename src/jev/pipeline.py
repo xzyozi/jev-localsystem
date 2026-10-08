@@ -50,14 +50,6 @@ class JudgePipeline:
         self.client = client or ZeroDecodeClient()
         self.vram_manager = vram_manager or default_vram_manager
 
-    def _is_cloud_model(self, model_name: str, client: ZeroDecodeClient) -> bool:
-        """指定モデルまたはクライアントがクラウド推論であるかを判定する (Issue #15)"""
-        if client.is_cloud:
-            return True
-        name_lower = model_name.lower()
-        cloud_prefixes = ("gpt-", "o1-", "o3-", "text-embedding", "claude-", "gemini-")
-        return any(name_lower.startswith(p) for p in cloud_prefixes)
-
     def judge(
         self,
         request: JudgeRequestDTO,
@@ -75,8 +67,9 @@ class JudgePipeline:
         active_client = client or self.client
         model_name = request.model or self.default_model
 
-        # クラウド推論かどうかの判定 (Issue #15)
-        is_cloud = self._is_cloud_model(model_name, active_client)
+        # クラウド推論かどうかは、実際に使うバックエンドで決める (Issue #15, #20)。
+        # モデル名からは推測しない（ローカルの gpt-oss:20b 等で VRAM 保護が外れるため）。
+        is_cloud = active_client.is_cloud
 
         # 1. コンテキスト長リミッター契約の事前検証 (クラウド時はバイパス)
         self.vram_manager.validate_payload_limits(request.context_text, bypass=is_cloud)
@@ -148,7 +141,9 @@ class JudgePipeline:
         messages, _, _ = PromptBuilder.build_messages(request, model_name)
         logprobs, _ = client.forward(model_name, messages)
         total_latency = (time.perf_counter() - t_start) * 1000.0
-        return ResultMapper.map_score(logprobs, total_latency, temperature=request.temperature)
+        return ResultMapper.map_score(
+            logprobs, total_latency, temperature=request.temperature, levels=request.score_levels
+        )
 
     def _execute_multilabel(
         self, request: JudgeRequestDTO, model_name: str, t_start: float, client: ZeroDecodeClient
@@ -164,7 +159,9 @@ class JudgePipeline:
             label_results.append((lbl, logprobs))
 
         total_latency = (time.perf_counter() - t_start) * 1000.0
-        return ResultMapper.map_multilabel(label_results, total_latency, threshold=0.5)
+        return ResultMapper.map_multilabel(
+            label_results, total_latency, threshold=request.threshold, offset=request.offset
+        )
 
 
     # ==========================================
@@ -214,14 +211,16 @@ class JudgePipeline:
         temperature: float = 1.0,
         model: Optional[str] = None,
         client: Optional[ZeroDecodeClient] = None,
+        score_levels: int = 5,
     ) -> JudgeResponseDTO:
-        """Score (段階評価) のショートカットメソッド"""
+        """Score (段階評価) のショートカットメソッド（score_levels: 段数 2〜9、既定 5）"""
         req = JudgeRequestDTO(
             task_type="score",
             context_text=context_text,
             rule_definition=rule_definition,
             temperature=temperature,
             model=model,
+            score_levels=score_levels,
         )
         return self.judge(req, client=client)
 
@@ -232,14 +231,18 @@ class JudgePipeline:
         rule_definition: str = "",
         model: Optional[str] = None,
         client: Optional[ZeroDecodeClient] = None,
+        threshold: float = 0.5,
+        offset: float = 0.0,
     ) -> JudgeResponseDTO:
-        """Multi-Label (複数選択) のショートカットメソッド"""
+        """Multi-Label (複数選択) のショートカットメソッド（threshold: 採用閾値、offset: Logit差分オフセット）"""
         req = JudgeRequestDTO(
             task_type="multilabel",
             context_text=context_text,
             labels=labels,
             rule_definition=rule_definition,
             model=model,
+            threshold=threshold,
+            offset=offset,
         )
         return self.judge(req, client=client)
 
