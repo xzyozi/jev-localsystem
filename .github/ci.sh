@@ -12,6 +12,9 @@ python3 -m venv "$tool_venv"
 "$tool_venv/bin/pip" install --quiet "uv==${UV_VERSION}"
 export PATH="$tool_venv/bin:$PATH"
 
+echo "=== uv lock --check (pyproject.toml と uv.lock の整合) ==="
+uv lock --check
+
 echo "=== uv sync (uv.lock どおりに導入) ==="
 uv sync --frozen --extra dev
 
