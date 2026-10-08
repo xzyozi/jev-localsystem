@@ -31,6 +31,7 @@ uv run pytest -p no:cacheprovider \
   tests/test_request_params.py \
   tests/test_cloud_detection.py \
   tests/test_api_request_params.py \
+  tests/test_api_evaluate_errors.py \
   tests/test_cloud_backend.py \
   tests/test_cloud_pipeline.py \
   tests/test_core_pipeline.py \
