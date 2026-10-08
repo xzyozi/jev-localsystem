@@ -148,7 +148,9 @@ class JudgePipeline:
         messages, _, _ = PromptBuilder.build_messages(request, model_name)
         logprobs, _ = client.forward(model_name, messages)
         total_latency = (time.perf_counter() - t_start) * 1000.0
-        return ResultMapper.map_score(logprobs, total_latency, temperature=request.temperature)
+        return ResultMapper.map_score(
+            logprobs, total_latency, temperature=request.temperature, levels=request.score_levels
+        )
 
     def _execute_multilabel(
         self, request: JudgeRequestDTO, model_name: str, t_start: float, client: ZeroDecodeClient
@@ -164,7 +166,9 @@ class JudgePipeline:
             label_results.append((lbl, logprobs))
 
         total_latency = (time.perf_counter() - t_start) * 1000.0
-        return ResultMapper.map_multilabel(label_results, total_latency, threshold=0.5)
+        return ResultMapper.map_multilabel(
+            label_results, total_latency, threshold=request.threshold, offset=request.offset
+        )
 
 
     # ==========================================
@@ -214,14 +218,16 @@ class JudgePipeline:
         temperature: float = 1.0,
         model: Optional[str] = None,
         client: Optional[ZeroDecodeClient] = None,
+        score_levels: int = 5,
     ) -> JudgeResponseDTO:
-        """Score (段階評価) のショートカットメソッド"""
+        """Score (段階評価) のショートカットメソッド（score_levels: 段数 2〜9、既定 5）"""
         req = JudgeRequestDTO(
             task_type="score",
             context_text=context_text,
             rule_definition=rule_definition,
             temperature=temperature,
             model=model,
+            score_levels=score_levels,
         )
         return self.judge(req, client=client)
 
@@ -232,14 +238,18 @@ class JudgePipeline:
         rule_definition: str = "",
         model: Optional[str] = None,
         client: Optional[ZeroDecodeClient] = None,
+        threshold: float = 0.5,
+        offset: float = 0.0,
     ) -> JudgeResponseDTO:
-        """Multi-Label (複数選択) のショートカットメソッド"""
+        """Multi-Label (複数選択) のショートカットメソッド（threshold: 採用閾値、offset: Logit差分オフセット）"""
         req = JudgeRequestDTO(
             task_type="multilabel",
             context_text=context_text,
             labels=labels,
             rule_definition=rule_definition,
             model=model,
+            threshold=threshold,
+            offset=offset,
         )
         return self.judge(req, client=client)
 

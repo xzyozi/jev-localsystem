@@ -116,6 +116,7 @@ def evaluate_batch(
                 temperature=request.temperature,
                 model=target_model,
                 client=custom_client,
+                score_levels=q.levels,
             )
 
             distribution = res.details.get("distribution", {})
@@ -167,6 +168,7 @@ def evaluate_batch(
                 rule_definition=rule_desc,
                 model=target_model,
                 client=custom_client,
+                threshold=q.threshold,
             )
 
 

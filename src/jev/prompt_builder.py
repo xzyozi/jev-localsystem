@@ -9,7 +9,7 @@
 
 from typing import Dict, List, Optional, Tuple
 
-from jev.dto import JudgeRequestDTO
+from jev.dto import DEFAULT_SCORE_LEVELS, MAX_CHOICE_LABELS, JudgeRequestDTO
 
 
 class PromptBuilder:
@@ -22,7 +22,32 @@ class PromptBuilder:
 
     # Choiceタスクで使用する標準記号
     CHOICE_SYMBOLS = ["A", "B", "C", "D", "E", "F", "G", "H"]
-    SCORE_SYMBOLS = ["1", "2", "3", "4", "5"]
+    SCORE_SYMBOLS = ["1", "2", "3", "4", "5"]  # 既定（5段階）。段数は JudgeRequestDTO.score_levels で変わる
+
+    # 5段階（検証済みの既定）のルーブリック。文言は実機検証時から変更しない
+    _SCORE_RUBRIC_5 = (
+        "あなたは厳密な段階評価判定器です。提示された基準に基づいて、対象テキストの品質や適合度を1〜5の5段階で評価してください。\n"
+        "説明は一切出力せず、必ず '1', '2', '3', '4', '5' のいずれか1文字の数字のみを出力してください。\n"
+        "1: 極めて低い / 不適合\n"
+        "2: 低い / やや不十分\n"
+        "3: 標準 / 合格水準\n"
+        "4: 高い / 良好\n"
+        "5: 極めて高い / 完璧"
+    )
+
+    @classmethod
+    def build_score_system_prompt(cls, levels: int) -> str:
+        """段数に応じた Score 用 system prompt を返す（5段階は検証済みの固定文言）"""
+        if levels == DEFAULT_SCORE_LEVELS:
+            return cls._SCORE_RUBRIC_5
+        symbols = ", ".join(f"'{i}'" for i in range(1, levels + 1))
+        return (
+            f"あなたは厳密な段階評価判定器です。提示された基準に基づいて、対象テキストの品質や適合度を1〜{levels}の{levels}段階で評価してください。\n"
+            f"説明は一切出力せず、必ず {symbols} のいずれか1文字の数字のみを出力してください。\n"
+            "1: 最も低い / 不適合\n"
+            f"{levels}: 最も高い / 完璧\n"
+            "（途中の段階は基準の定義に従い、数値が大きいほど評価が高い）"
+        )
 
     @classmethod
     def is_thinking_model(cls, model_name: str) -> bool:
@@ -103,6 +128,9 @@ class PromptBuilder:
         labels = list(request.labels)
         if not labels:
             raise ValueError("Choice task requires at least 2 labels in request.labels")
+        if len(labels) > MAX_CHOICE_LABELS:
+            # DTO 検証を通らない経路でも、ラベルを黙って切り捨てない
+            raise ValueError(f"Choice task supports at most {MAX_CHOICE_LABELS} labels (got {len(labels)})")
 
         # スワップ時は選択肢の順序を反転 (Issue #4 仕様)
         display_labels = list(reversed(labels)) if swap else labels
@@ -141,17 +169,10 @@ class PromptBuilder:
     def _build_score_prompt(
         cls, request: JudgeRequestDTO, prefill: Optional[str]
     ) -> Tuple[List[Dict[str, str]], List[str], Dict[str, str]]:
-        system_prompt = (
-            "あなたは厳密な段階評価判定器です。提示された基準に基づいて、対象テキストの品質や適合度を1〜5の5段階で評価してください。\n"
-            "説明は一切出力せず、必ず '1', '2', '3', '4', '5' のいずれか1文字の数字のみを出力してください。\n"
-            "1: 極めて低い / 不適合\n"
-            "2: 低い / やや不十分\n"
-            "3: 標準 / 合格水準\n"
-            "4: 高い / 良好\n"
-            "5: 極めて高い / 完璧"
-        )
+        levels = request.score_levels
+        system_prompt = cls.build_score_system_prompt(levels)
         rule_part = f"\n【評価基準】\n{request.rule_definition}\n" if request.rule_definition else ""
-        user_prompt = f"{rule_part}\n【対象テキスト】\n{request.context_text}\n\n評価スコア (1-5):"
+        user_prompt = f"{rule_part}\n【対象テキスト】\n{request.context_text}\n\n評価スコア (1-{levels}):"
 
         messages = [
             {"role": "system", "content": system_prompt},
@@ -160,11 +181,12 @@ class PromptBuilder:
         if prefill:
             messages.append({"role": "assistant", "content": prefill})
 
+        score_symbols = [str(i) for i in range(1, levels + 1)]
         target_tokens = []
-        for sym in cls.SCORE_SYMBOLS:
+        for sym in score_symbols:
             target_tokens.extend([sym, f" {sym}"])
 
-        mapping = {sym: sym for sym in cls.SCORE_SYMBOLS}
+        mapping = {sym: sym for sym in score_symbols}
         return messages, target_tokens, mapping
 
     @classmethod
