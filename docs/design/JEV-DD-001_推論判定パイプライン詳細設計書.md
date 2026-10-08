@@ -18,7 +18,7 @@ related_documents:
 | :--- | :--- |
 | 文書番号 | JEV-DD-001 |
 | ドキュメント名 | JEV 推論判定パイプライン詳細設計書 |
-| 版数 | Rev.1.6 (リクエスト指定値の検証・反映: Choice件数検証・threshold/offset・Score段数) |
+| 版数 | Rev.1.7 (/evaluate の非SUCCESS応答で中立値を返さない仕様を追加) |
 | 改訂日 | 2026-10-08 |
 | 作成日 | 2026-09-20 |
 
@@ -252,4 +252,5 @@ flowchart TD
 | Rev.1.4 | 2026-09-22 | JEV Architecture Team | Jev互換バッチ評価API（/api/v1/evaluate & /api/evaluate）、OpenAI互換クラウドZero-Decodeバックエンド抽象化、VRAMセマフォバイパス制御の反映 (Issue #14, #15) |
 | Rev.1.5 | 2026-10-08 | JEV Architecture Team | 対象トークン確率質量チェックの追加。Yes/No・選択肢記号・1〜5 が Top-Logprobs に現れない場合、偽の SUCCESS（0.5 等）ではなく INCONCLUSIVE を返す契約へ変更（DTOスキーマ変更なし） |
 | Rev.1.6 | 2026-10-08 | JEV Architecture Team | リクエスト指定値の検証・反映（Issue #19）。Choice 選択肢数の検証（2〜8）、Multi-Label の threshold/offset 反映、Score 段数（score_levels）の動的化。いずれも既定値は従来どおり（後方互換） |
+| Rev.1.7 | 2026-10-08 | JEV Architecture Team | /api/v1/evaluate の応答仕様（Issue #21 の一部）。status が ERROR / INCONCLUSIVE の質問は、noul を 0.5 などの中立値で埋めず null とし、全タイプで error_message を返す。HTTP ステータス（502 等）の扱いは未決のため別途 |
 
