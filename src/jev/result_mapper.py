@@ -6,10 +6,11 @@
 3. Choice: Softmax確率正規化、A/Bスワップ位置バイアス相殺・引き分け検知 (Issue #4)
 4. Score: 1〜5スケールの確率加重連続値期待値キャリブレーション (Issue #7)
 5. Multi-Label: 独立Sigmoid確率算出と閾値フィルタリング (Issue #5)
+6. 対象トークン確率質量チェック: 想定外トークン出力時は偽 SUCCESS ではなく INCONCLUSIVE を返す
 """
 
 import math
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Iterable, List, Optional, Tuple
 
 from jev.dto import (
     ChoiceDetails,
@@ -25,6 +26,30 @@ class ResultMapper:
 
     # トークンがTop-10に不在の場合の安全な極小対数確率（exp(-20.0) ≒ 2.06e-9）
     FALLBACK_LOGPROB = -20.0
+
+    # 対象トークン群（Yes/No、A〜H、1〜5 等）が次トークン分布全体で占める確率質量の下限。
+    # これを下回る場合、モデルが想定外のトークン（前置き文など）を出そうとしており、
+    # 正規化後の確率は実質ノイズであるため SUCCESS とせず INCONCLUSIVE を返す。
+    MIN_TARGET_MASS = 0.1
+
+    @classmethod
+    def get_target_mass(cls, logprobs: Dict[str, float], symbols: Iterable[str]) -> float:
+        """対象記号群（空白バリアント合算）の確率質量の合計を返す。
+
+        logprobs は語彙全体に対する対数確率なので、この値は正規化前の「対象トークンが選ばれる確率」にあたる。
+        """
+        return sum(cls.get_token_prob(logprobs, s) for s in symbols)
+
+    @classmethod
+    def _resolve_min_mass(cls, min_target_mass: Optional[float]) -> float:
+        return cls.MIN_TARGET_MASS if min_target_mass is None else min_target_mass
+
+    @classmethod
+    def _low_mass_message(cls, detail: str, min_mass: float) -> str:
+        return (
+            f"Target tokens not found in top logprobs candidates ({detail}; "
+            f"required mass >= {min_mass}). The model did not emit the expected answer tokens."
+        )
 
     @classmethod
     def get_token_prob(cls, logprobs: Dict[str, float], symbol: str) -> float:
@@ -47,8 +72,12 @@ class ResultMapper:
         cls,
         logprobs: Dict[str, float],
         latency_ms: float,
+        min_target_mass: Optional[float] = None,
     ) -> JudgeResponseDTO:
-        """Noul (真偽判定) 結果のマッピング (Issue #1, #3)"""
+        """Noul (真偽判定) 結果のマッピング (Issue #1, #3)
+
+        Yes/No の確率質量が下限未満の場合は SUCCESS とせず INCONCLUSIVE を返す。
+        """
         p_yes = cls.get_token_prob(logprobs, "Yes")
         p_no = cls.get_token_prob(logprobs, "No")
 
@@ -69,6 +98,18 @@ class ResultMapper:
             prob_no=round(norm_no, 4),
         )
 
+        min_mass = cls._resolve_min_mass(min_target_mass)
+        if sum_p < min_mass:
+            return JudgeResponseDTO(
+                task_type="noul",
+                status="INCONCLUSIVE",
+                verdict=None,
+                latency_ms=round(latency_ms, 2),
+                confidence=None,
+                details=details.model_dump(),
+                error_message=cls._low_mass_message(f"Yes/No mass={sum_p:.4g}", min_mass),
+            )
+
         return JudgeResponseDTO(
             task_type="noul",
             status="SUCCESS",
@@ -86,8 +127,12 @@ class ResultMapper:
         latency_ms: float,
         logprobs_swap: Optional[Dict[str, float]] = None,
         symbol_map_swap: Optional[Dict[str, str]] = None,
+        min_target_mass: Optional[float] = None,
     ) -> JudgeResponseDTO:
-        """Choice (単一選択) 結果のマッピングおよびスワップ照合 (Issue #4)"""
+        """Choice (単一選択) 結果のマッピングおよびスワップ照合 (Issue #4)
+
+        選択肢記号の確率質量が下限未満（forward / swap いずれか）の場合は INCONCLUSIVE を返す。
+        """
         # 1. Forward 側の確率計算
         probs_raw = {sym: cls.get_token_prob(logprobs_forward, sym) for sym in symbol_map_forward}
         total_p = sum(probs_raw.values())
@@ -98,6 +143,32 @@ class ResultMapper:
         confidence = probs_norm[best_sym]
 
         label_probabilities = {symbol_map_forward[sym]: round(p, 4) for sym, p in probs_norm.items()}
+
+        # 1.5 対象記号の確率質量チェック（想定外トークン出力時の偽 SUCCESS 防止）
+        min_mass = cls._resolve_min_mass(min_target_mass)
+        mass_problems = []
+        if total_p < min_mass:
+            mass_problems.append(f"forward mass={total_p:.4g}")
+        if logprobs_swap is not None and symbol_map_swap is not None:
+            swap_mass = cls.get_target_mass(logprobs_swap, symbol_map_swap)
+            if swap_mass < min_mass:
+                mass_problems.append(f"swap mass={swap_mass:.4g}")
+        if mass_problems:
+            details = ChoiceDetails(
+                symbol=best_sym,
+                is_consistent=False,
+                swap_verified=logprobs_swap is not None and symbol_map_swap is not None,
+                probabilities=label_probabilities,
+            )
+            return JudgeResponseDTO(
+                task_type="choice",
+                status="INCONCLUSIVE",
+                verdict=None,
+                latency_ms=round(latency_ms, 2),
+                confidence=None,
+                details=details.model_dump(),
+                error_message=cls._low_mass_message(", ".join(mass_problems), min_mass),
+            )
 
         # 2. スワップ検証の照合
         if logprobs_swap is not None and symbol_map_swap is not None:
@@ -155,9 +226,14 @@ class ResultMapper:
         logprobs: Dict[str, float],
         latency_ms: float,
         temperature: float = 1.0,
+        min_target_mass: Optional[float] = None,
     ) -> JudgeResponseDTO:
-        """Score (段階評価) 確率加重平均による連続値期待値キャリブレーション (Issue #7)"""
+        """Score (段階評価) 確率加重平均による連続値期待値キャリブレーション (Issue #7)
+
+        '1'〜'5' の確率質量が下限未満の場合は SUCCESS とせず INCONCLUSIVE を返す。
+        """
         scales = ["1", "2", "3", "4", "5"]
+        target_mass = cls.get_target_mass(logprobs, scales)
 
         # 温度パラメータを適用した確率計算
         log_probs = {}
@@ -182,6 +258,18 @@ class ResultMapper:
             most_likely=most_likely,
         )
 
+        min_mass = cls._resolve_min_mass(min_target_mass)
+        if target_mass < min_mass:
+            return JudgeResponseDTO(
+                task_type="score",
+                status="INCONCLUSIVE",
+                verdict=None,
+                latency_ms=round(latency_ms, 2),
+                confidence=None,
+                details=details.model_dump(),
+                error_message=cls._low_mass_message(f"1-5 mass={target_mass:.4g}", min_mass),
+            )
+
         return JudgeResponseDTO(
             task_type="score",
             status="SUCCESS",
@@ -198,6 +286,7 @@ class ResultMapper:
         latency_ms: float,
         threshold: float = 0.5,
         offset: float = 0.0,
+        min_target_mass: Optional[float] = None,
     ) -> JudgeResponseDTO:
         """Multi-Label (複数選択) 独立Sigmoid確率と閾値判定 (Issue #5)
 
@@ -206,12 +295,20 @@ class ResultMapper:
             latency_ms: 所要時間
             threshold: 採用判定のSigmoid確率閾値 (デフォルト 0.5)
             offset: Logit差分オフセット
+            min_target_mass: ラベルごとの Yes/No 確率質量の下限 (省略時 MIN_TARGET_MASS)。
+                1ラベルでも下回れば全体を INCONCLUSIVE とする。
         """
         margins = {}
         probabilities = {}
         matched_labels = []
+        min_mass = cls._resolve_min_mass(min_target_mass)
+        low_mass_labels = []
 
         for label, logprobs in label_results:
+            yes_no_mass = cls.get_target_mass(logprobs, ("Yes", "No"))
+            if yes_no_mass < min_mass:
+                low_mass_labels.append(f"{label}(mass={yes_no_mass:.4g})")
+
             lp_yes = cls.get_token_logprob_sum(logprobs, "Yes")
             lp_no = cls.get_token_logprob_sum(logprobs, "No")
 
@@ -238,6 +335,17 @@ class ResultMapper:
             threshold=threshold,
             offset=offset,
         )
+
+        if low_mass_labels:
+            return JudgeResponseDTO(
+                task_type="multilabel",
+                status="INCONCLUSIVE",
+                verdict=None,
+                latency_ms=round(latency_ms, 2),
+                confidence=None,
+                details=details.model_dump(),
+                error_message=cls._low_mass_message(", ".join(low_mass_labels), min_mass),
+            )
 
         return JudgeResponseDTO(
             task_type="multilabel",

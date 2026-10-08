@@ -18,8 +18,8 @@ related_documents:
 | :--- | :--- |
 | 文書番号 | JEV-DD-001 |
 | ドキュメント名 | JEV 推論判定パイプライン詳細設計書 |
-| 版数 | Rev.1.4 (Jev互換バッチ評価API・OpenAI互換クラウド推論バックエンド・VRAMバイパス反映) |
-| 改訂日 | 2026-09-22 |
+| 版数 | Rev.1.5 (対象トークン確率質量チェックによる INCONCLUSIVE 判定を追加) |
+| 改訂日 | 2026-10-08 |
 | 作成日 | 2026-09-20 |
 
 | 作成者 | JEV Architecture Team |
@@ -77,7 +77,7 @@ related_documents:
   - `max_tokens: 1` （1トークンで強制終了）
   - `temperature: 0.0` （完全決定論的推論）
   - `logprobs: True`
-  - `top_logprobs: 10` （上位候補の対数確率を一括取得）
+  - `top_logprobs: 10` （上位候補の対数確率を一括取得。対象トークンの絞り込みは取得後に `ResultMapper` が行う事後正規化であり、`logit_bias` 等による語彙マスキングはバックエンドへ送信しない）
 
 ### 2.4 リソース保護契約（VRAM Manager）
 1. **直列キューイング契約（Issue #8 実証済）**:
@@ -234,7 +234,7 @@ flowchart TD
 | **`PayloadTooLargeError`** | コンテキスト長が 4,000トークンを超過（ローカル時） | 推論を実行せず前段で即座に遮断 | `status="ERROR"`, `message="Context exceeds 4,000 tokens"` |
 | **`QueueTimeoutError`** | キュー待機時間が 60秒を超過（ローカル時） | リクエストを破棄しGPUリソースを保護 | `status="ERROR"`, `message="VRAM Queue timeout"` |
 | **`InconclusiveVerdict`** | スワップ検証で結果が不一致（Issue #4） | 偽の判定を下さず引き分けとして検知 | `status="INCONCLUSIVE"`, `verdict=None` |
-| **`TokenNotFoundError`** | 対象記号が上位10トークンに不在 | デフォルトの極小値（-20.0）を補完して安全計算 | 計算を継続し、確率0%として処理 |
+| **対象トークン不在（低質量）** | 対象記号群（Yes/No、A〜H、1〜5）の確率質量の合計が `ResultMapper.MIN_TARGET_MASS`（既定 0.1）未満 | 個別トークンの不在は極小値（-20.0）で補完して計算するが、質量合計が下限を下回る場合は正規化結果を採用しない | `status="INCONCLUSIVE"`, `verdict=None`, `confidence=None`, `error_message` に質量を記載 |
 
 ---
 
@@ -247,4 +247,5 @@ flowchart TD
 | Rev.1.2 | 2026-09-21 | JEV Architecture Team | Core具象モジュール・クラス設計確定、DTOフィールド拡張（model, error_message）、および2層APIアーキテクチャの定義 |
 | Rev.1.3 | 2026-09-21 | JEV Architecture Team | FastAPI REST API サーバー（src/jev/server/）具象実装、全エンドポイント仕様定義、HTTP例外マッピング（413/422/502/504）の反映 |
 | Rev.1.4 | 2026-09-22 | JEV Architecture Team | Jev互換バッチ評価API（/api/v1/evaluate & /api/evaluate）、OpenAI互換クラウドZero-Decodeバックエンド抽象化、VRAMセマフォバイパス制御の反映 (Issue #14, #15) |
+| Rev.1.5 | 2026-10-08 | JEV Architecture Team | 対象トークン確率質量チェックの追加。Yes/No・選択肢記号・1〜5 が Top-Logprobs に現れない場合、偽の SUCCESS（0.5 等）ではなく INCONCLUSIVE を返す契約へ変更（DTOスキーマ変更なし） |
 
