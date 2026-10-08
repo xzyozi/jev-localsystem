@@ -55,6 +55,7 @@ def test_api_models(client: TestClient):
 # 2. 判定タスクエンドポイント正常系テスト (E2E)
 # ==========================================
 
+@pytest.mark.ollama
 def test_api_noul(client: TestClient, target_model: str):
     """POST /api/v1/noul の検証"""
     payload = {
@@ -71,6 +72,7 @@ def test_api_noul(client: TestClient, target_model: str):
     assert data["latency_ms"] > 0
 
 
+@pytest.mark.ollama
 def test_api_choice(client: TestClient, target_model: str):
     """POST /api/v1/choice の検証 (スワップ検証付き)"""
     payload = {
@@ -88,6 +90,7 @@ def test_api_choice(client: TestClient, target_model: str):
     assert data["details"]["swap_verified"] is True
 
 
+@pytest.mark.ollama
 def test_api_score(client: TestClient, target_model: str):
     """POST /api/v1/score の検証"""
     payload = {
@@ -104,6 +107,7 @@ def test_api_score(client: TestClient, target_model: str):
     assert 1.0 <= data["verdict"] <= 5.0
 
 
+@pytest.mark.ollama
 def test_api_multilabel(client: TestClient, target_model: str):
     """POST /api/v1/multilabel の検証"""
     payload = {
@@ -121,6 +125,7 @@ def test_api_multilabel(client: TestClient, target_model: str):
     assert "Security" in data["verdict"]
 
 
+@pytest.mark.ollama
 def test_api_judge_unified(client: TestClient, target_model: str):
     """POST /api/v1/judge (統合エンドポイント) の検証"""
     payload = {

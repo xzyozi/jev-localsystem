@@ -15,6 +15,7 @@ def client():
     return TestClient(app)
 
 
+@pytest.mark.ollama
 def test_evaluate_batch_v1_full_suite(client: TestClient, target_model: str):
     """POST /api/v1/evaluate の全タスク型混在バッチ評価テスト"""
     payload = {
@@ -89,6 +90,7 @@ def test_evaluate_batch_v1_full_suite(client: TestClient, target_model: str):
     assert isinstance(cat["matched_labels"], list)
 
 
+@pytest.mark.ollama
 def test_evaluate_batch_alias_route(client: TestClient, target_model: str):
     """POST /api/evaluate 互換エイリアスルートの疎通・互換性テスト"""
     payload = {
