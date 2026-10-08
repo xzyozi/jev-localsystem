@@ -104,3 +104,6 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 pythonpath = ["."]
 addopts = "-v --tb=short -p no:cacheprovider"
+markers = [
+    "ollama: 実機 Ollama への接続が必要なテスト（CI では -m 'not ollama' で除外）",
+]

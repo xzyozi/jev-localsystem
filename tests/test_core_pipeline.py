@@ -146,6 +146,7 @@ def test_result_mapper_score_calibration():
 # 5. 実機 Ollama 統合テスト (E2E)
 # ==========================================
 
+@pytest.mark.ollama
 def test_pipeline_e2e_real_model(target_model: str):
     """実際のローカル推論バックエンド（Ollama）を用いたパイプライン統合検証"""
     pipeline = JudgePipeline(default_model=target_model)
