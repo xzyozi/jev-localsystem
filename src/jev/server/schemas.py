@@ -4,6 +4,8 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
+from jev.dto import MAX_CHOICE_LABELS, MIN_CHOICE_LABELS
+
 # ==========================================
 # タスク別リクエストスキーマ
 # ==========================================
@@ -29,7 +31,9 @@ class ChoiceRequest(BaseModel):
     """単一選択 (分類) リクエスト"""
 
     context_text: str = Field(..., description="分類対象テキスト")
-    labels: List[str] = Field(..., min_length=2, description="選択肢ラベルのリスト（2個以上）")
+    labels: List[str] = Field(
+        ..., min_length=MIN_CHOICE_LABELS, max_length=MAX_CHOICE_LABELS, description="選択肢ラベルのリスト（2〜8個）"
+    )
     rule_definition: str = Field(default="", description="分類ルール（任意）")
     swap_verify: bool = Field(default=True, description="位置バイアス相殺のためのA/Bスワップ推論を行うか")
     model: Optional[str] = Field(default=None, description="推論モデル名")

@@ -19,7 +19,7 @@ from jev.dto import (
     ScoreQuestionDTO,
 )
 from jev.server.api.v1.judge import get_pipeline
-from jev.zero_decode import OpenAIBackend, ZeroDecodeClient
+from jev.zero_decode import OpenAIBackend, ZeroDecodeClient, is_cloud_model_name
 
 router = APIRouter(tags=["JEV Batch Evaluation"])
 
@@ -33,14 +33,9 @@ def _format_state(state: Any) -> str:
 
 def _resolve_client(request: EvaluateRequestDTO) -> ZeroDecodeClient | None:
     """リクエスト情報から明示的なクラウドクライアントが必要かを判定・構築する (Issue #15)"""
-    model_lower = (request.model or "").lower()
-    is_cloud_model = any(
-        model_lower.startswith(p)
-        for p in ("gpt-", "o1-", "o3-", "text-embedding", "claude-", "gemini-")
-    )
-
-    # api_key または base_url が明示指定されたか、モデル名がクラウドプレフィックスの場合
-    if request.api_key or request.base_url or is_cloud_model:
+    # api_key または base_url が明示指定されたか、モデル名がクラウド API の識別名らしい場合
+    # (Ollama の name:tag 形式はクラウドとみなさない)
+    if request.api_key or request.base_url or is_cloud_model_name(request.model):
         backend = OpenAIBackend(api_key=request.api_key, base_url=request.base_url)
         return ZeroDecodeClient(backend=backend)
     return None
@@ -98,6 +93,7 @@ def evaluate_batch(
                 "confidence": res.confidence,
                 "probabilities": probabilities,
                 "status": res.status,
+                "error_message": res.error_message,
             }
 
         elif isinstance(q, ScoreQuestionDTO):
@@ -116,6 +112,7 @@ def evaluate_batch(
                 temperature=request.temperature,
                 model=target_model,
                 client=custom_client,
+                score_levels=q.levels,
             )
 
             distribution = res.details.get("distribution", {})
@@ -126,6 +123,7 @@ def evaluate_batch(
                 "legend": distribution,
                 "probabilities": distribution,
                 "status": res.status,
+                "error_message": res.error_message,
             }
 
         elif isinstance(q, NoulQuestionDTO):
@@ -142,14 +140,17 @@ def evaluate_batch(
                 client=custom_client,
             )
 
-            p_yes = res.details.get("prob_yes", 0.5)
+            # ERROR / INCONCLUSIVE のときは中立値(0.5)を作らず、null で返す (Issue #21)
+            ok = res.status == "SUCCESS"
+            p_yes = res.details.get("prob_yes") if ok else None
             answers[q_name] = {
                 "type": "noul",
-                "noul": round(p_yes, 4),
+                "noul": round(p_yes, 4) if p_yes is not None else None,
                 "verdict": res.verdict,
                 "confidence": res.confidence,
-                "margin": res.details.get("margin", 0.0),
+                "margin": res.details.get("margin") if ok else None,
                 "status": res.status,
+                "error_message": res.error_message,
             }
 
         elif isinstance(q, MultiLabelQuestionDTO):
@@ -167,6 +168,7 @@ def evaluate_batch(
                 rule_definition=rule_desc,
                 model=target_model,
                 client=custom_client,
+                threshold=q.threshold,
             )
 
 
@@ -177,6 +179,7 @@ def evaluate_batch(
                 "probabilities": res.details.get("probabilities", {}),
                 "margins": res.details.get("margins", {}),
                 "status": res.status,
+                "error_message": res.error_message,
             }
 
     total_latency_ms = (time.perf_counter() - t_start) * 1000.0

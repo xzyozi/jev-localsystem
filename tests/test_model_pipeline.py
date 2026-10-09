@@ -1,6 +1,8 @@
 import os
 import sys
 
+import pytest
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from scripts.verify_model_pipeline_suite import (
@@ -11,6 +13,9 @@ from scripts.verify_model_pipeline_suite import (
     run_test_sequential_queue,
     run_test_token_and_latency,
 )
+
+# このモジュールのテストはすべて実機 Ollama への接続が必要（CI では -m "not ollama" で除外）
+pytestmark = pytest.mark.ollama
 
 
 def test_token_binding_and_latency(target_model):

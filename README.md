@@ -7,13 +7,14 @@
 ## 概要
 
 従来の生成AIによる評価（LLM-as-a-Judge）では、文章生成ループ（Autoregressive Decode）に伴う推論遅延、KVキャッシュ肥大化によるVRAM枯渇、フォーマット崩れや出力ゆらぎが課題でした。
-本システムは、**文章デコードを行わず、単一Forwardパスから目的トークンIDのLogitを直接抽出・マスキング・正規化** することで、決定的かつ高精度なスコアリング・分類をローカル環境で高速実行します。
+本システムは、**文章デコードを行わず、単一Forwardパスから目的トークンIDのLogitを直接抽出・絞り込み・正規化** することで、決定的かつ高精度なスコアリング・分類をローカル環境で高速実行します。
 
 ### 理論的裏付け（主要諸元）
 
 1. **出力強制とLogitマスキング（Guided Generation）**  
    - Willard & Louf (2023), *Efficient Guided Generation for Large Language Models* ([arXiv:2307.09702](https://arxiv.org/abs/2307.09702))  
    - 有限オートマトン（FSM）に基づく語彙マスキングにより目的トークンのみを計算。
+   - ※ 現行実装は `top_logprobs=10` の取得結果を事後に目的トークンへ絞り込んで正規化する方式です（`logit_bias` 等の語彙マスキングは未使用）。目的トークンの確率質量が `ResultMapper.MIN_TARGET_MASS`（既定 0.1）未満の場合は `INCONCLUSIVE` を返します。
 2. **生成を伴わない判定特化モデルの優位性（Encoder-Only）**  
    - He et al. (2021/2023), *DeBERTaV3: Improving DeBERTa using ELECTRA-Style Pre-Training* ([arXiv:2111.09543](https://arxiv.org/abs/2111.09543))  
    - デコードループとKVキャッシュを排除し、省VRAMかつ双方向文脈理解による高精度判定。
@@ -26,7 +27,7 @@
 ## ドキュメント一覧
 
 - **基本設計書**: [JEV-BD-001_基本設計書.md](docs/design/JEV-BD-001_基本設計書.md) (Rev.1.1)
-- **推論判定パイプライン詳細設計書**: [JEV-DD-001_推論判定パイプライン詳細設計書.md](docs/design/JEV-DD-001_推論判定パイプライン詳細設計書.md) (Rev.1.3)
+- **推論判定パイプライン詳細設計書**: [JEV-DD-001_推論判定パイプライン詳細設計書.md](docs/design/JEV-DD-001_推論判定パイプライン詳細設計書.md) (Rev.1.5)
 - **検証方法設計書**: [JEV-TEST-001_検証方法設計書.md](docs/test/JEV-TEST-001_検証方法設計書.md) (Rev.1.1)
 - **Git Submodule 連携・他プロジェクト組み込みガイド**: [docs/how-to/git_submodule_integration_guide.md](docs/how-to/git_submodule_integration_guide.md)
 - **Git Flow & ブランチ運用方針**: [docs/setup/git_flow_and_branch_policy.md](docs/setup/git_flow_and_branch_policy.md)
@@ -121,6 +122,7 @@ export OPENAI_API_KEY="sk-..."
 uv run jev-server
 ```
 リクエスト時に `model: "gpt-4o-mini"` を指定するか、リクエストボディに `api_key` を含めることで自動的にクラウド推論へルーティングされ、ローカル VRAM 排他ロックが自動バイパスされます。
+なお、バイパスの可否は実際に使うバックエンドで決まります。`gpt-oss:20b` のように `:` を含む Ollama 形式のモデル名は、クラウド名の接頭辞に似ていてもローカルモデルとして扱われ、VRAM 保護は有効なままです。
 
 ### 4. 他プロジェクトへの組み込み（Git Submodule 方式）
 他リポジトリ（自律エージェントや母艦アプリ等）から JEV を内部モジュールとして組み込んで利用する場合、Git Submodule として配置することで、外部パス依存ゼロ・通信オーバーヘッドゼロで利用できます。
