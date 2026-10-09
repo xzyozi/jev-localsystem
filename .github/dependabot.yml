@@ -1,0 +1,22 @@
+version: 2
+
+updates:
+  # GitHub Actions: コミット SHA でピン留めしたアクションの更新（行末コメントの # v4 も追従する）
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 3
+    commit-message:
+      prefix: "[other] "
+
+  # Python (uv): pyproject.toml / uv.lock の依存更新
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 3
+    commit-message:
+      prefix: "[other] "
