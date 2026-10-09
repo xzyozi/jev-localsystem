@@ -20,16 +20,16 @@
 
 ## 2. CI/CD ＆ リモート自動化 (GitHub / GitHub Actions)
 
-不要なリモートブランチが残留しないよう、以下の2層の自動クリーンアップを組み込んでいます。
+不要なリモートブランチが残留しないよう、GitHub の設定で PR マージ後のブランチを自動削除します。
 
 ### ① GitHub 設定: PRマージ後のリモートブランチ自動削除
 - GitHubの管理画面 (`Settings` > `General` > `Pull Requests`) にて **`Automatically delete head branches`** を有効化。
 - PRが `develop` または `main` にマージされた時点で、リモートの作業ブランチが自動削除されます。
 
-### ② GitHub Actions: 定期クリーンアップ ワークフロー
-- 設定ファイル: [branch-cleanup.yml](../../.github/workflows/branch-cleanup.yml)
-- **トリガー**: 毎週月曜午前 0:00 (UTC) または 手動実行 (`workflow_dispatch`)
-- **機能**: `develop` にマージ済みのリモートブランチを自動検出して一括削除（`main`, `develop` は自動保護）。
+### ② GitHub Actions による定期クリーンアップ（廃止）
+- 以前は `branch-cleanup.yml` で、`develop` にマージ済みのリモートブランチを毎週一括削除していました。
+- `git branch -r --merged origin/develop` は、`develop` の先端から切っただけでコミットのないブランチも「マージ済み」と判定するため、作業開始直後のブランチが削除されるおそれがあり、ワークフローを削除しました。
+- 再導入する場合は、ブランチの有無ではなく PR の状態（merged / closed）で判定してください（Issue #25）。
 
 ---
 
