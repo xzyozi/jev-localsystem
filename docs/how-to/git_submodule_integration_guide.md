@@ -48,7 +48,7 @@ git commit -m "feat: JEVローカル判定基盤をサブモジュールとし�
 ```
 
 ### ステップ 2: 親プロジェクトの `pyproject.toml` 設定 (uv 連携)
-親プロジェクトの仮想環境から JEV をシームレスにインポートできるよう、親の `pyproject.toml` に相対パス参照を追加します。
+親プロジェクトの仮想環境から JEV をシームレスにインポートできるよう、親の `pyproject.toml` に依存と取得元(`tool.uv.sources`)を追加します。
 
 ```toml
 # my-parent-project/pyproject.toml
@@ -56,16 +56,16 @@ git commit -m "feat: JEVローカル判定基盤をサブモジュールとし�
 [project]
 name = "my-parent-project"
 dependencies = [
-    # 相対パスによる JEV のローカルパッケージ参照
-    "jev-localsystem @ file://./submodules/jev-localsystem"
+    "jev-localsystem",
 ]
-```
 
-または `tool.uv.sources` 構文を利用する場合:
-```toml
+# 取得元をサブモジュールのパス(親プロジェクトルートからの相対パス)に差し替える
 [tool.uv.sources]
 jev-localsystem = { path = "submodules/jev-localsystem", editable = true }
 ```
+
+> `"jev-localsystem @ file://./submodules/jev-localsystem"` のような相対パスの `file://` URL は、PEP 508 の direct reference として解決できない可能性が高いため使用しません（`file://` には絶対パスが必要です）。
+> `pip` で導入する場合は、親プロジェクトのルートで `pip install -e submodules/jev-localsystem` を実行します。
 
 設定後、親プロジェクトで依存関係を同期します：
 ```bash
