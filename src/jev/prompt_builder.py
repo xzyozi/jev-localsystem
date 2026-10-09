@@ -10,15 +10,17 @@
 from typing import Dict, List, Optional, Tuple
 
 from jev.dto import DEFAULT_SCORE_LEVELS, MAX_CHOICE_LABELS, JudgeRequestDTO
+from jev.model_profiles import PREFILL_THINK_TAG, PREFILL_THOUGHT_TAG, is_thinking, resolve_prefill
 
 
 class PromptBuilder:
     """JEV プロンプト構築およびPrefill注入クラス (JEV-DD-001 2.2)"""
 
-    # 思考モデルの判定シグネチャと注入タグ
+    # 後方互換のための定数。モデル別の判定は jev.model_profiles（ModelProfile）に集約している。
+    # THINKING_MODELS は組み込みの思考モデルのスナップショットで、判定には使わない。
     THINKING_MODELS = ("qwen3", "deepseek-r1")
-    PREFILL_THINK_TAG = "<think>\n\n</think>\n"
-    PREFILL_THOUGHT_TAG = "<thought>\n\n</thought>\n"
+    PREFILL_THINK_TAG = PREFILL_THINK_TAG
+    PREFILL_THOUGHT_TAG = PREFILL_THOUGHT_TAG
 
     # Choiceタスクで使用する標準記号
     CHOICE_SYMBOLS = ["A", "B", "C", "D", "E", "F", "G", "H"]
@@ -51,19 +53,13 @@ class PromptBuilder:
 
     @classmethod
     def is_thinking_model(cls, model_name: str) -> bool:
-        """モデル名から推論思考（CoT）モデルであるかを判定する"""
-        name_lower = model_name.lower()
-        return any(tm in name_lower for tm in cls.THINKING_MODELS)
+        """モデル名から推論思考（CoT）モデルであるかを判定する（jev.model_profiles に委譲）"""
+        return is_thinking(model_name)
 
     @classmethod
     def get_prefill_string(cls, model_name: str) -> Optional[str]:
-        """思考抑制用のPrefill文字列を取得する (Issue #2, #9 実証成果)"""
-        name_lower = model_name.lower()
-        if "qwen3" in name_lower:
-            return cls.PREFILL_THINK_TAG
-        if "deepseek-r1" in name_lower or "gemma" in name_lower:
-            return cls.PREFILL_THOUGHT_TAG
-        return None
+        """思考抑制用のPrefill文字列を取得する (Issue #2, #9 実証成果。jev.model_profiles に委譲)"""
+        return resolve_prefill(model_name)
 
     @classmethod
     def build_messages(
