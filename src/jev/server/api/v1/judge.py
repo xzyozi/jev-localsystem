@@ -17,15 +17,26 @@ router = APIRouter(prefix="/api/v1", tags=["Judge"])
 _pipeline_instance: JudgePipeline | None = None
 
 
+def create_pipeline() -> JudgePipeline:
+    """サーバー設定から JudgePipeline を新規生成する（キャッシュしない）"""
+    return JudgePipeline(
+        default_model=settings.default_model,
+        lightweight_model=settings.lightweight_model,
+    )
+
+
 def get_pipeline() -> JudgePipeline:
-    """JudgePipeline インスタンスを取得する (依存性注入用)"""
+    """JudgePipeline インスタンスを取得する (依存性注入用。初回のみ生成してキャッシュする)"""
     global _pipeline_instance
     if _pipeline_instance is None:
-        _pipeline_instance = JudgePipeline(
-            default_model=settings.default_model,
-            lightweight_model=settings.lightweight_model,
-        )
+        _pipeline_instance = create_pipeline()
     return _pipeline_instance
+
+
+def reset_pipeline() -> None:
+    """キャッシュ済みの JudgePipeline を破棄する（設定変更後の再生成やテスト用）"""
+    global _pipeline_instance
+    _pipeline_instance = None
 
 
 @router.post("/judge", response_model=JudgeResponseDTO, summary="統合判定エンドポイント")

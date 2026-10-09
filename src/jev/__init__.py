@@ -20,6 +20,7 @@ from jev.exceptions import (
     QueueTimeoutError,
     TokenNotFoundError,
 )
+from jev.model_profiles import ModelProfile, register_model_profile
 from jev.pipeline import JudgePipeline
 from jev.prompt_builder import PromptBuilder
 from jev.result_mapper import ResultMapper
@@ -53,6 +54,8 @@ __all__ = [
     "VRAMManager",
     "default_vram_manager",
     "PromptBuilder",
+    "ModelProfile",
+    "register_model_profile",
     "InferenceBackend",
     "OllamaBackend",
     "OpenAIBackend",

@@ -106,8 +106,8 @@ class JudgePipeline:
     def _execute_noul(
         self, request: JudgeRequestDTO, model_name: str, t_start: float, client: ZeroDecodeClient
     ) -> JudgeResponseDTO:
-        messages, _, _ = PromptBuilder.build_messages(request, model_name)
-        logprobs, _ = client.forward(model_name, messages)
+        messages, target_tokens, _ = PromptBuilder.build_messages(request, model_name)
+        logprobs, _ = client.forward(model_name, messages, target_tokens=target_tokens)
         total_latency = (time.perf_counter() - t_start) * 1000.0
         return ResultMapper.map_noul(logprobs, total_latency)
 
@@ -115,16 +115,16 @@ class JudgePipeline:
         self, request: JudgeRequestDTO, model_name: str, t_start: float, client: ZeroDecodeClient
     ) -> JudgeResponseDTO:
         # 1. 通常 Forward
-        messages_fwd, _, symbol_map_fwd = PromptBuilder.build_messages(request, model_name, swap=False)
-        logprobs_fwd, _ = client.forward(model_name, messages_fwd)
+        messages_fwd, tokens_fwd, symbol_map_fwd = PromptBuilder.build_messages(request, model_name, swap=False)
+        logprobs_fwd, _ = client.forward(model_name, messages_fwd, target_tokens=tokens_fwd)
 
         logprobs_swap = None
         symbol_map_swap = None
 
         # 2. A/Bスワップ検証 (Issue #4 仕様)
         if request.swap_verify and len(request.labels) >= 2:
-            messages_swap, _, symbol_map_swap = PromptBuilder.build_messages(request, model_name, swap=True)
-            logprobs_swap, _ = client.forward(model_name, messages_swap)
+            messages_swap, tokens_swap, symbol_map_swap = PromptBuilder.build_messages(request, model_name, swap=True)
+            logprobs_swap, _ = client.forward(model_name, messages_swap, target_tokens=tokens_swap)
 
         total_latency = (time.perf_counter() - t_start) * 1000.0
         return ResultMapper.map_choice(
@@ -138,8 +138,8 @@ class JudgePipeline:
     def _execute_score(
         self, request: JudgeRequestDTO, model_name: str, t_start: float, client: ZeroDecodeClient
     ) -> JudgeResponseDTO:
-        messages, _, _ = PromptBuilder.build_messages(request, model_name)
-        logprobs, _ = client.forward(model_name, messages)
+        messages, target_tokens, _ = PromptBuilder.build_messages(request, model_name)
+        logprobs, _ = client.forward(model_name, messages, target_tokens=target_tokens)
         total_latency = (time.perf_counter() - t_start) * 1000.0
         return ResultMapper.map_score(
             logprobs, total_latency, temperature=request.temperature, levels=request.score_levels
@@ -154,8 +154,8 @@ class JudgePipeline:
 
         label_results = []
         for lbl in labels:
-            messages, _, _ = PromptBuilder.build_messages(request, model_name, single_label_target=lbl)
-            logprobs, _ = client.forward(model_name, messages)
+            messages, target_tokens, _ = PromptBuilder.build_messages(request, model_name, single_label_target=lbl)
+            logprobs, _ = client.forward(model_name, messages, target_tokens=target_tokens)
             label_results.append((lbl, logprobs))
 
         total_latency = (time.perf_counter() - t_start) * 1000.0
