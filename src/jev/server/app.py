@@ -97,7 +97,7 @@ def create_app() -> FastAPI:
     app.include_router(system_router)
     app.include_router(evaluate_router)
 
-    # TypeSafe Jev / OpenJev エコシステム完全互換用エイリアス
+    # Jev / OpenJev 風のバッチ評価エイリアス（完全互換ではない）
     app.add_api_route(
         "/api/evaluate",
         evaluate_batch,
@@ -106,7 +106,10 @@ def create_app() -> FastAPI:
         include_in_schema=True,
         tags=["Compatibility (TypeSafe Jev / OpenJev)"],
         summary="Jev互換バッチ評価エイリアス (/api/v1/evaluate と同等)",
-        description="TypeSafe Jev / OpenJev のクライアントやUIからそのまま呼び出せる互換用エンドポイントです。",
+        description=(
+            "/api/v1/evaluate と同じ処理を /api/evaluate でも呼び出せるエイリアスです。"
+            "Jev / OpenJev 風の語彙を使いますが、完全互換ではありません。"
+        ),
     )
 
     return app

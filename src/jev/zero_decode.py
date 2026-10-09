@@ -11,7 +11,7 @@ import logging
 import os
 import sys
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import requests
 
@@ -81,6 +81,21 @@ class InferenceBackend(ABC):
     ) -> Tuple[Dict[str, float], float]:
         """1サイクル推論 (Forwardパス) を実行し、Top-Logprobs辞書と所要時間(ms)を返却する"""
         pass
+
+    def forward_constrained(
+        self,
+        model: str,
+        messages: List[Dict[str, str]],
+        target_tokens: Sequence[str],
+        top_logprobs: int = 10,
+    ) -> Tuple[Dict[str, float], float]:
+        """対象トークン群を伝えたうえで1サイクル推論を実行する（拡張ポイント）。
+
+        既定実装は target_tokens を使わず forward() を呼ぶ（現行の Ollama / OpenAI 互換バックエンドと同じ挙動）。
+        ``logit_bias`` や ``allowed_token_ids`` による語彙制限に対応するバックエンドは、これをオーバーライドする。
+        既存のサブクラス（forward のみ実装）は変更なしで動作する。
+        """
+        return self.forward(model, messages, top_logprobs=top_logprobs)
 
     @property
     @abstractmethod
@@ -260,7 +275,17 @@ class ZeroDecodeClient:
         model: str,
         messages: List[Dict[str, str]],
         top_logprobs: int = 10,
+        target_tokens: Optional[Sequence[str]] = None,
     ) -> Tuple[Dict[str, float], float]:
-        """1サイクル推論 (Forwardパス) を実行し、Top-Logprobs辞書と所要時間を返却する"""
+        """1サイクル推論 (Forwardパス) を実行し、Top-Logprobs辞書と所要時間を返却する
+
+        Args:
+            target_tokens: 判定対象のトークン群（省略可）。指定された場合は
+                ``InferenceBackend.forward_constrained`` を呼ぶ。
+        """
+        if target_tokens:
+            return self.backend.forward_constrained(
+                model, messages, target_tokens, top_logprobs=top_logprobs
+            )
         return self.backend.forward(model, messages, top_logprobs=top_logprobs)
 

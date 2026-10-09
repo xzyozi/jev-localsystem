@@ -100,7 +100,7 @@ uv run jev-server --reload --port 8000
 #### 主要エンドポイント一覧
 | メソッド | パス | 概要 |
 | :--- | :--- | :--- |
-| `POST` | `/api/v1/evaluate`<br>`/api/evaluate` | **【新機能】Jev / OpenJev 完全互換バッチ評価**（1リクエストで複数質問を一括評価） |
+| `POST` | `/api/v1/evaluate`<br>`/api/evaluate` | **Jev / OpenJev 風のバッチ評価**（1リクエストで複数質問を一括評価。語彙は近いが、パス・Score の段数と値・`confidence` の定義などは上流と異なり、完全互換ではない） |
 | `POST` | `/api/v1/noul` | 真偽判定（Yes/No、規程適合判定） |
 | `POST` | `/api/v1/choice` | 単一選択（A/Bスワップ位置バイアス相殺付） |
 | `POST` | `/api/v1/score` | 段階評価（1〜5の加重連続値期待値） |
@@ -133,18 +133,21 @@ uv run jev-server
 git submodule add https://github.com/xzyozi/jev-localsystem.git submodules/jev-localsystem
 ```
 
-親プロジェクトの `pyproject.toml` に `"jev-localsystem @ file://./submodules/jev-localsystem"` を指定することで、プロセス内関数呼出し（最速 39ms）として直接インポートできます。  
+親プロジェクトの `pyproject.toml` で `jev-localsystem` を依存に加え、`[tool.uv.sources]` で `path = "submodules/jev-localsystem"` を指定することで、プロセス内関数呼出し（最速 39ms）として直接インポートできます。  
 詳細は [Git Submodule 連携・他プロジェクト組み込みガイド](docs/how-to/git_submodule_integration_guide.md) を参照してください。
 
 ---
 
-## テスト実行 (全25テスト完走)
+## テスト実行
 
 ```bash
 # 依存関係の同期
 uv sync --extra dev
 
-# 全テストの実行 (Core + Model + REST API)
+# Ollama 不要のテストのみ実行 (CI と同じ選択)
+uv run pytest -m "not ollama"
+
+# 実機 Ollama が必要なテストも含めて全件実行
 uv run pytest -v
 
 # コード品質チェック
@@ -177,7 +180,7 @@ jev-localsystem/
 │           ├── main.py         # サーバー起動CLI (jev-server)
 │           ├── schemas.py      # API用リクエスト/レスポンススキーマ
 │           └── api/v1/         # v1 ルーター (judge, system)
-├── tests/              # Pytest自動テストスイート (25 passed)
+├── tests/              # Pytest自動テストスイート
 │   ├── conftest.py             # 動的モデルオプション設定
 │   ├── test_core_pipeline.py   # コアパイプライン単体・統合テスト
 │   ├── test_api_server.py      # REST API サーバー包括テスト

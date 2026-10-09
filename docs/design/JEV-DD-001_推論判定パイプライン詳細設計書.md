@@ -18,7 +18,7 @@ related_documents:
 | :--- | :--- |
 | 文書番号 | JEV-DD-001 |
 | ドキュメント名 | JEV 推論判定パイプライン詳細設計書 |
-| 版数 | Rev.1.7 (/evaluate の非SUCCESS応答で中立値を返さない仕様を追加) |
+| 版数 | Rev.1.8 (モデルプロファイルの外出し・バックエンド契約の拡張点を追加) |
 | 改訂日 | 2026-10-08 |
 | 作成日 | 2026-09-20 |
 
@@ -172,8 +172,9 @@ related_documents:
 | `src/jev/dto.py` | `JudgeRequestDTO`<br>`JudgeResponseDTO` 等 | 入出力データのPydantic型バリデーションおよびタスク別詳細構造 |
 | `src/jev/exceptions.py` | `JevError`<br>`PayloadTooLargeError` 等 | ハードリミット超過やタイムアウト等の安全回路例外定義 |
 | `src/jev/vram_manager.py` | `VRAMManager`<br>`default_vram_manager` | セマフォによる直列FIFO排他制御および文字数/トークン長リミッター |
-| `src/jev/prompt_builder.py` | `PromptBuilder` | 思考モデル向け空タグPrefill注入、ラベル記号化、A/Bスワップ生成 |
-| `src/jev/zero_decode.py` | `ZeroDecodeClient` | 1Forwardパスによるlogprobs抽出および通信レイテンシ計測 |
+| `src/jev/model_profiles.py` | `ModelProfile`<br>`register_model_profile` | モデル名に紐づく特性（思考モデルか、Prefill文字列）の集約。利用者定義の追加が可能 |
+| `src/jev/prompt_builder.py` | `PromptBuilder` | 思考モデル向け空タグPrefill注入（判定は `model_profiles` に委譲）、ラベル記号化、A/Bスワップ生成 |
+| `src/jev/zero_decode.py` | `ZeroDecodeClient`<br>`InferenceBackend` | 1Forwardパスによるlogprobs抽出および通信レイテンシ計測。`forward_constrained` で判定対象トークンをバックエンドへ渡せる（既定は無視） |
 | `src/jev/result_mapper.py` | `ResultMapper` | 空白バリアント対数和合算、スワップ照合、連続値期待値算出 |
 | `src/jev/pipeline.py` | `JudgePipeline` | 外部向け統合ファサード、タスク別ショートカットメソッド提供 |
 
@@ -253,4 +254,5 @@ flowchart TD
 | Rev.1.5 | 2026-10-08 | JEV Architecture Team | 対象トークン確率質量チェックの追加。Yes/No・選択肢記号・1〜5 が Top-Logprobs に現れない場合、偽の SUCCESS（0.5 等）ではなく INCONCLUSIVE を返す契約へ変更（DTOスキーマ変更なし） |
 | Rev.1.6 | 2026-10-08 | JEV Architecture Team | リクエスト指定値の検証・反映（Issue #19）。Choice 選択肢数の検証（2〜8）、Multi-Label の threshold/offset 反映、Score 段数（score_levels）の動的化。いずれも既定値は従来どおり（後方互換） |
 | Rev.1.7 | 2026-10-08 | JEV Architecture Team | /api/v1/evaluate の応答仕様（Issue #21 の一部）。status が ERROR / INCONCLUSIVE の質問は、noul を 0.5 などの中立値で埋めず null とし、全タイプで error_message を返す。HTTP ステータス（502 等）の扱いは未決のため別途 |
+| Rev.1.8 | 2026-10-08 | JEV Architecture Team | 内部リファクタ（Issue #23 の一部）。モデル別特性を `model_profiles.py` に集約、`InferenceBackend.forward_constrained`（省略可能な拡張点）で `target_tokens` をバックエンドへ受け渡し、サーバー設定の環境変数をインスタンス生成時に読み込み。外部インターフェース・判定結果は変更なし |
 
