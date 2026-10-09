@@ -1,6 +1,7 @@
 """JEV REST API Jev互換バッチ評価ルーターモジュール (v1 / 互換エイリアス)
 
-TypeSafe Jev / OpenJev と完全互換な 1リクエスト複数質問バッチ評価 API を提供します (Issue #14)。
+TypeSafe Jev / OpenJev 風の 1リクエスト複数質問バッチ評価 API を提供します (Issue #14)。
+完全互換ではなく、パス・Score の段数と値・confidence の定義などは上流と異なります。
 """
 
 import json
