@@ -235,8 +235,9 @@ flowchart TD
 
 | エラー種別 | 検知条件 | パイプラインの振る舞い | クライアントへの返却 |
 | :--- | :--- | :--- | :--- |
-| **`PayloadTooLargeError`** | コンテキスト長が 4,000トークンを超過（ローカル時） | 推論を実行せず前段で即座に遮断 | `status="ERROR"`, `message="Context exceeds 4,000 tokens"` |
-| **`QueueTimeoutError`** | キュー待機時間が 60秒を超過（ローカル時） | リクエストを破棄しGPUリソースを保護 | `status="ERROR"`, `message="VRAM Queue timeout"` |
+| **`PayloadTooLargeError`** | コンテキスト長が 4,000トークンを超過（ローカル時） | 推論を実行せず前段で即座に遮断 | `status="ERROR"`, `message="Context exceeds 4,000 tokens"` (Web API: HTTP 413) |
+| **`QueueTimeoutError`** | キュー待機時間が 60秒を超過（ローカル時） | リクエストを破棄しGPUリソースを保護 | `status="ERROR"`, `message="VRAM Queue timeout"` (Web API: HTTP 504) |
+| **`BackendConnectionError`** | 推論バックエンド（Ollama / OpenAI互換API）への接続失敗・通信障害 | パイプライン内で丸め込まず例外を上位へ伝播 | Web API: HTTP 502 Bad Gateway (`error_type="BackendConnectionError"`) |
 | **`InconclusiveVerdict`** | スワップ検証で結果が不一致（Issue #4） | 偽の判定を下さず引き分けとして検知 | `status="INCONCLUSIVE"`, `verdict=None` |
 | **対象トークン不在（低質量）** | 対象記号群（Yes/No、A〜H、1〜5）の確率質量の合計が `ResultMapper.MIN_TARGET_MASS`（既定 0.1）未満 | 個別トークンの不在は極小値（-20.0）で補完して計算するが、質量合計が下限を下回る場合は正規化結果を採用しない | `status="INCONCLUSIVE"`, `verdict=None`, `confidence=None`, `error_message` に質量を記載 |
 
@@ -255,4 +256,5 @@ flowchart TD
 | Rev.1.6 | 2026-10-08 | JEV Architecture Team | リクエスト指定値の検証・反映（Issue #19）。Choice 選択肢数の検証（2〜8）、Multi-Label の threshold/offset 反映、Score 段数（score_levels）の動的化。いずれも既定値は従来どおり（後方互換） |
 | Rev.1.7 | 2026-10-08 | JEV Architecture Team | /api/v1/evaluate の応答仕様（Issue #21 の一部）。status が ERROR / INCONCLUSIVE の質問は、noul を 0.5 などの中立値で埋めず null とし、全タイプで error_message を返す。HTTP ステータス（502 等）の扱いは未決のため別途 |
 | Rev.1.8 | 2026-10-08 | JEV Architecture Team | 内部リファクタ（Issue #23 の一部）。モデル別特性を `model_profiles.py` に集約、`InferenceBackend.forward_constrained`（省略可能な拡張点）で `target_tokens` をバックエンドへ受け渡し、サーバー設定の環境変数をインスタンス生成時に読み込み。外部インターフェース・判定結果は変更なし |
+| Rev.1.9 | 2026-10-31 | JEV Architecture Team | バックエンド障害時のエラー伝播仕様の統一（Issue #21）。`JudgePipeline.judge` が `BackendConnectionError` を捕捉して HTTP 200 (status=ERROR) に丸め込む挙動を是正し上位へ再送出。Web API 層（`/api/v1/judge` 等および `/api/v1/evaluate`）で設計通りの HTTP 502 Bad Gateway を返却するよう改修 |
 
