@@ -171,12 +171,14 @@ def test_pipeline_normal_noul_is_unchanged():
     assert res.verdict == "Yes"
 
 
-def test_pipeline_backend_error_still_error_status():
-    """バックエンド障害は従来どおり ERROR（今回の変更で挙動を変えていないことの確認）"""
+def test_pipeline_backend_error_raises_exception():
+    """バックエンド障害は上位へ伝播し BackendConnectionError が送出されること (Issue #21)"""
 
     class _Down(_FakeBackend):
         def forward(self, model, messages, top_logprobs=10):
             raise BackendConnectionError("down")
 
     pipe = JudgePipeline(client=ZeroDecodeClient(backend=_Down({})))
-    assert pipe.judge_noul("テスト", "基準").status == "ERROR"
+    with pytest.raises(BackendConnectionError) as exc_info:
+        pipe.judge_noul("テスト", "基準")
+    assert "down" in str(exc_info.value)

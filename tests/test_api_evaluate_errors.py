@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 import pytest
 
 from jev import BackendConnectionError, JudgePipeline, ZeroDecodeClient
+from jev.dto import JudgeResponseDTO
 from jev.server.api.v1.judge import get_pipeline
 from jev.server.app import app
 from jev.zero_decode import InferenceBackend
@@ -55,13 +56,35 @@ _PAYLOAD = {
 }
 
 
-def test_backend_failure_does_not_fabricate_neutral_values():
+def test_backend_failure_returns_502():
+    """バックエンド障害発生時は HTTP 502 Bad Gateway が返ること (Issue #21)"""
     resp = _client(_Backend({}, fail=True)).post("/api/v1/evaluate", json=_PAYLOAD)
+    assert resp.status_code == 502, resp.text
+    data = resp.json()
+    assert data["error_type"] == "BackendConnectionError"
+    assert "backend down" in data["detail"]
+
+
+def test_pipeline_error_does_not_fabricate_neutral_values():
+    """パイプライン内部エラー（status=ERROR）時、中立値を作らず null と error_message を返すこと (Issue #21)"""
+
+    class _ErrorPipeline(JudgePipeline):
+        def judge(self, request, client=None):
+            return JudgeResponseDTO(
+                task_type=request.task_type,
+                status="ERROR",
+                verdict=None,
+                latency_ms=1.0,
+                error_message="mock internal pipeline error",
+            )
+
+    app.dependency_overrides[get_pipeline] = lambda: _ErrorPipeline()
+    resp = TestClient(app).post("/api/v1/evaluate", json=_PAYLOAD)
     assert resp.status_code == 200, resp.text
     answers = resp.json()["answers"]
     for name in ("n", "c", "s", "m"):
         assert answers[name]["status"] == "ERROR"
-        assert "backend down" in answers[name]["error_message"]
+        assert "mock internal pipeline error" in answers[name]["error_message"]
     assert answers["n"]["noul"] is None
     assert answers["n"]["margin"] is None
     assert answers["c"]["choice"] is None
