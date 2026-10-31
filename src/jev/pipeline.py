@@ -11,7 +11,11 @@ import time
 from typing import List, Optional
 
 from jev.dto import JudgeRequestDTO, JudgeResponseDTO
-from jev.exceptions import PayloadTooLargeError, QueueTimeoutError
+from jev.exceptions import (
+    BackendConnectionError,
+    PayloadTooLargeError,
+    QueueTimeoutError,
+)
 from jev.prompt_builder import PromptBuilder
 from jev.result_mapper import ResultMapper
 from jev.vram_manager import VRAMManager, default_vram_manager
@@ -90,7 +94,7 @@ class JudgePipeline:
                 else:
                     raise ValueError(f"Unknown task_type: {request.task_type}")
 
-        except (PayloadTooLargeError, QueueTimeoutError):
+        except (PayloadTooLargeError, QueueTimeoutError, BackendConnectionError):
             raise
         except Exception as e:
             elapsed_ms = (time.perf_counter() - t_start) * 1000.0
