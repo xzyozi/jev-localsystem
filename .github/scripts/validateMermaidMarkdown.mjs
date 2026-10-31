@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join, relative, resolve } from "node:path";
 
@@ -145,11 +145,20 @@ const renderBlock = (filePath, block, temporaryDirectory) => {
     const fileStem = `${basename(filePath, ".md")}-${block.number}`;
     const inputPath = join(temporaryDirectory, `${fileStem}.mmd`);
     const outputPath = join(temporaryDirectory, `${fileStem}.svg`);
+    const puppeteerConfigPath = join(temporaryDirectory, "puppeteer-config.json");
+    if (!existsSync(puppeteerConfigPath)) {
+        writeFileSync(puppeteerConfigPath, JSON.stringify({
+            args: ["--no-sandbox", "--disable-setuid-sandbox"],
+        }), "utf8");
+    }
     writeFileSync(inputPath, block.content, "utf8");
 
     const npxCommand = process.platform === "win32" ? "npx.cmd" : "npx";
     const result = spawnSync(npxCommand, [
-        "--yes", "--package", MERMAID_CLI_PACKAGE, "mmdc", "--input", inputPath, "--output", outputPath,
+        "--yes", "--package", MERMAID_CLI_PACKAGE, "mmdc",
+        "--input", inputPath,
+        "--output", outputPath,
+        "--puppeteerConfigFile", puppeteerConfigPath,
     ], { cwd: REPOSITORY_ROOT, encoding: "utf8" });
     if (result.status !== 0) {
         const details = [result.stdout, result.stderr].filter(Boolean).join("\n").trim();
