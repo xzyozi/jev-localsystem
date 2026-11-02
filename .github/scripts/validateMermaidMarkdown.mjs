@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join, relative, resolve } from "node:path";
 
@@ -177,7 +177,13 @@ const validateMermaid = (filePaths) => {
 
     const temporaryDirectory = mkdtempSync(join(tmpdir(), "mermaid-validation-"));
     const puppeteerConfigPath = join(temporaryDirectory, "puppeteer-config.json");
-    writeFileSync(puppeteerConfigPath, JSON.stringify({ args: ["--no-sandbox", "--disable-setuid-sandbox"] }), "utf8");
+    const puppeteerConfig = { args: ["--no-sandbox", "--disable-setuid-sandbox"] };
+    if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+        puppeteerConfig.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+    } else if (process.platform === "linux" && existsSync("/usr/bin/google-chrome")) {
+        puppeteerConfig.executablePath = "/usr/bin/google-chrome";
+    }
+    writeFileSync(puppeteerConfigPath, JSON.stringify(puppeteerConfig), "utf8");
     const errors = [];
     let diagramCount = 0;
     try {
