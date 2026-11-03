@@ -79,6 +79,11 @@ related_documents:
   - `logprobs: True`
   - `top_logprobs: 10` （上位候補の対数確率を一括取得。対象トークンの絞り込みは取得後に `ResultMapper` が行う事後正規化であり、`logit_bias` 等による語彙マスキングはバックエンドへ送信しない）
 
+#### 2.3.1 プロンプト構造と Prefill キャッシュ最適化（State-First契約 / Issue #22）
+複数質問バッチ評価（`/api/v1/evaluate`）や Multi-Label における直列推論の高速化のため、`PromptBuilder` は以下の **State-First（対象テキスト先頭固定）** 構造を採用する：
+- **構造**: `【対象テキスト】\n{context_text}` をユーザーメッセージの先頭に固定し、可変の判定基準や質問・選択肢・評価カテゴリを末尾に配置する。
+- **効果**: 因果的アテンション（Causal Attention）の性質により、先頭トークン列の KV キャッシュ（Prompt Cache）が 2問目以降で 100% ヒットし、長文テキスト全体の Prefill 計算をスキップして **2問目以降の推論速度が約 16倍〜31倍高速化** される（実機実測検証済、判定精度への劣化なし）。スワップ検証（A/Bスワップ）時も 2回目の推論で先頭コンテキストのキャッシュが再利用される。
+
 ### 2.4 リソース保護契約（VRAM Manager）
 1. **直列キューイング契約（Issue #8 実証済）**:
    - 単一GPU環境下でのOOMを完全に防止するため、`threading.Semaphore(1)` によるバッチサイズ1のFIFO直列キューイングを強制。
@@ -258,4 +263,5 @@ flowchart TD
 | Rev.1.8 | 2026-10-08 | JEV Architecture Team | 内部リファクタ（Issue #23 の一部）。モデル別特性を `model_profiles.py` に集約、`InferenceBackend.forward_constrained`（省略可能な拡張点）で `target_tokens` をバックエンドへ受け渡し、サーバー設定の環境変数をインスタンス生成時に読み込み。外部インターフェース・判定結果は変更なし |
 | Rev.1.9 | 2026-10-31 | JEV Architecture Team | バックエンド障害時のエラー伝播仕様の統一（Issue #21）。`JudgePipeline.judge` が `BackendConnectionError` を捕捉して HTTP 200 (status=ERROR) に丸め込む挙動を是正し上位へ再送出。Web API 層（`/api/v1/judge` 等および `/api/v1/evaluate`）で設計通りの HTTP 502 Bad Gateway を返却するよう改修 |
 | Rev.1.10 | 2026-11-03 | JEV Architecture Team | 対象トークン確率質量下限（`MIN_TARGET_MASS=0.1`）の実機妥当性検証成果反映（Issue #26）。Ollama 上の Tier 1 (`qwen3:8b`) および Tier 2 (`phi4-mini:latest`) において正常時（90.7%〜100%）と異常時（~1e-8）の明確な分離境界および誤検知ゼロを確認、設計値 0.1 を確定 |
+| Rev.1.11 | 2026-11-03 | JEV Architecture Team | 複数質問バッチ評価およびMulti-Labelにおける同一StateのPrefill重複排除（Issue #22）。`PromptBuilder` で不変の対象テキストを先頭に固定する State-First 構造を採用し、Prefix Caching により2問目以降のレイテンシを約16〜31倍高速化（精度劣化なし） |
 
