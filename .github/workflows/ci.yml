@@ -15,11 +15,21 @@ concurrency:
 
 jobs:
   ci:
+    name: ci (${{ matrix.python-version }})
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12"]
     steps:
       - name: Checkout repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        with:
+          python-version: ${{ matrix.python-version }}
 
       # Projects opt in to their language-specific checks through one of these contracts.
       - name: Detect project CI contract
@@ -31,22 +41,22 @@ jobs:
           elif [ -f "Makefile" ] && grep -Eq '^ci[[:space:]]*:' Makefile; then
             echo "runner=make" >> "$GITHUB_OUTPUT"
           else
-            echo "runner=none" >> "$GITHUB_OUTPUT"
+            echo "::error::No project CI contract found; .github/ci.sh is required in this repository."
+            exit 1
           fi
 
       - name: Run project CI script
         if: steps.detect.outputs.runner == 'script'
         shell: bash
+        env:
+          PYTHON_VERSION: ${{ matrix.python-version }}
+          UV_PYTHON: ${{ matrix.python-version }}
         run: bash .github/ci.sh
 
       - name: Run Makefile CI target
         if: steps.detect.outputs.runner == 'make'
         shell: bash
+        env:
+          PYTHON_VERSION: ${{ matrix.python-version }}
+          UV_PYTHON: ${{ matrix.python-version }}
         run: make ci
-
-      - name: Skip project-specific checks
-        if: steps.detect.outputs.runner == 'none'
-        shell: bash
-        run: |
-          echo "No project CI contract found; project-specific checks are skipped."
-          echo "Add .github/ci.sh or a Makefile target named ci to enable checks."

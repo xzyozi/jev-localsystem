@@ -12,6 +12,17 @@ python3 -m venv "$tool_venv"
 "$tool_venv/bin/pip" install --quiet "uv==${UV_VERSION}"
 export PATH="$tool_venv/bin:$PATH"
 
+# 指定された Python バージョンがあれば uv に伝播させる
+if [ -n "${PYTHON_VERSION:-}" ]; then
+  export UV_PYTHON="${PYTHON_VERSION}"
+fi
+
+echo "=== Python version ==="
+python3 --version
+if [ -n "${UV_PYTHON:-}" ]; then
+  echo "Target UV_PYTHON: ${UV_PYTHON}"
+fi
+
 echo "=== uv lock --check (pyproject.toml と uv.lock の整合) ==="
 uv lock --check
 
