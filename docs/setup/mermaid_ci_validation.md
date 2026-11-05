@@ -2,11 +2,11 @@
 
 ## 目的
 
-`docs/` 配下の Markdown に含まれる Mermaid 図を、GitHub Actions 上でレンダリング検証する。AI Agent を含む変更で Mermaid 記法が壊れた場合、マージ前にCIを失敗させる。
+`docs/` 配下とルートの `README.md` に含まれる Mermaid 図を、GitHub Actions 上でレンダリング検証する。AI Agent を含む変更で Mermaid 記法が壊れた場合、マージ前にCIを失敗させる。
 
 ## 対象
 
-- 対象ファイル: `docs/**/*.md`
+- 対象ファイル: `docs/**/*.md`、`README.md`
 - 対象ブロック: ` ```mermaid ` で開始するフェンスドコードブロック
 - 検証対象の変更種別: 追加・変更・コピー・リネーム
 - 削除されたファイルは検証しない。
@@ -21,11 +21,11 @@
 
 Mermaid検証ワークフローは、次の場合に実行する。
 
-- `main` または `develop` に対するPRで `docs/**/*.md` が変更された場合
-- `main` または `develop` へのpushで `docs/**/*.md` が変更された場合
+- `main` または `develop` に対するPRで `docs/**/*.md` または `README.md` が変更された場合
+- `main` または `develop` へのpushで `docs/**/*.md` または `README.md` が変更された場合
 - `workflow_dispatch` による手動実行
 
-通常のPR・pushでは差分ファイルだけを検証する。手動実行では全 `docs/**/*.md` を検証できるようにし、導入時のベースライン確認や定期的な全件確認に使用する。
+通常のPR・pushでは差分ファイルだけを検証する。手動実行では `docs/**/*.md` と `README.md` を検証できるようにし、導入時のベースライン確認や定期的な全件確認に使用する。
 
 ## 依存関係と再現性
 

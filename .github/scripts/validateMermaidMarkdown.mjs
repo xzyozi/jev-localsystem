@@ -9,6 +9,7 @@ const MERMAID_CLI_PACKAGE = "@mermaid-js/mermaid-cli@11.4.2";
 const EMPTY_TREE_SHA = "4b825dc642cb6eb9a060e54bf8d69288fbee4904";
 const REPOSITORY_ROOT = resolve(import.meta.dirname, "..", "..");
 const DOCS_DIRECTORY = join(REPOSITORY_ROOT, "docs");
+const ROOT_README = join(REPOSITORY_ROOT, "README.md");
 
 /**
  * Parse the supported command-line options.
@@ -64,11 +65,16 @@ const runGit = (argumentsList) => execFileSync("git", argumentsList, { cwd: REPO
  *     head: Comparison head revision.
  *
  * Returns:
- *     Repository-relative Markdown paths under docs.
+ *     Repository-relative Markdown paths under docs or the root README.
  */
 const collectChangedMarkdownFiles = (base, head) => runGit([
+<<<<<<< HEAD
     "diff", "--name-only", "--diff-filter=ACMR", normalizeBaseRevision(base), head, "--", "docs",
 ]).split(/\r?\n/).filter((filePath) => filePath.endsWith(".md"));
+=======
+    "-c", "core.quotePath=false", "diff", "-z", "--name-only", "--diff-filter=ACMR", normalizeBaseRevision(base), head, "--", "docs", "README.md",
+]).split("\0").filter((filePath) => filePath.endsWith(".md"));
+>>>>>>> 4d07b22 ([fix] ルートREADMEをMermaid CI対象に追加)
 /**
  * Recursively collect every Markdown file under docs.
  *
@@ -171,7 +177,7 @@ const renderBlock = (filePath, block, temporaryDirectory) => {
  */
 const validateMermaid = (filePaths) => {
     if (filePaths.length === 0) {
-        console.log("No changed Markdown files under docs; Mermaid validation skipped.");
+        console.log("No changed Markdown files under docs or the root README; Mermaid validation skipped.");
         return;
     }
 
@@ -202,7 +208,9 @@ const validateMermaid = (filePaths) => {
 
 try {
     const options = parseArguments();
-    const files = options.all ? collectAllMarkdownFiles() : collectChangedMarkdownFiles(options.base, options.head);
+    const files = options.all
+        ? [...collectAllMarkdownFiles(), relative(REPOSITORY_ROOT, ROOT_README)]
+        : collectChangedMarkdownFiles(options.base, options.head);
     validateMermaid(files);
 } catch (error) {
     console.error(error instanceof Error ? error.message : error);
