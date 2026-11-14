@@ -1,0 +1,325 @@
+{
+  "timestamp": "2026-11-14T20:35:20+0900",
+  "models": {
+    "qwen3:8b": {
+      "evaluate": [
+        {
+          "state_label": "short_1000c",
+          "chars": 1000,
+          "batch_latency_ms": 25459.71,
+          "single_latencies_ms": {
+            "policy_choice": 11364.94,
+            "compliance_score": 5796.9,
+            "mfa_mandatory": 5279.55,
+            "topics": 5937.96
+          },
+          "comparisons": {
+            "choice": {
+              "batch_verdict": "mfa_required",
+              "single_verdict": "mfa_required",
+              "verdict_match": true,
+              "max_prob_diff": 0.0
+            },
+            "score": {
+              "batch_score": 4.89,
+              "single_score": 4.89,
+              "score_diff": 0.0,
+              "max_prob_diff": 0.0
+            },
+            "noul": {
+              "batch_verdict": "Yes",
+              "single_verdict": "Yes",
+              "verdict_match": true,
+              "prob_diff": 0.0,
+              "batch_margin": 19.9915,
+              "single_margin": 19.9915
+            },
+            "multilabel": {
+              "batch_matched": [
+                "Authentication",
+                "Database",
+                "Logging"
+              ],
+              "single_matched": [
+                "Authentication",
+                "Database",
+                "Logging"
+              ],
+              "matched_match": true,
+              "max_prob_diff": 0.0,
+              "max_margin_diff": 0.0
+            }
+          }
+        },
+        {
+          "state_label": "medium_3000c",
+          "chars": 3000,
+          "batch_latency_ms": 60874.78,
+          "single_latencies_ms": {
+            "policy_choice": 15542.07,
+            "compliance_score": 16027.42,
+            "mfa_mandatory": 15309.57,
+            "topics": 16014.55
+          },
+          "comparisons": {
+            "choice": {
+              "batch_verdict": "mfa_required",
+              "single_verdict": "mfa_required",
+              "verdict_match": true,
+              "max_prob_diff": 0.0
+            },
+            "score": {
+              "batch_score": 1.233,
+              "single_score": 1.233,
+              "score_diff": 0.0,
+              "max_prob_diff": 0.0
+            },
+            "noul": {
+              "batch_verdict": "Yes",
+              "single_verdict": "Yes",
+              "verdict_match": true,
+              "prob_diff": 0.0,
+              "batch_margin": 19.9635,
+              "single_margin": 19.9635
+            },
+            "multilabel": {
+              "batch_matched": [
+                "Authentication",
+                "Database",
+                "Logging"
+              ],
+              "single_matched": [
+                "Authentication",
+                "Database",
+                "Logging"
+              ],
+              "matched_match": true,
+              "max_prob_diff": 0.0,
+              "max_margin_diff": 0.0
+            }
+          }
+        }
+      ],
+      "pipeline_multilabel": [
+        {
+          "batch_matched": [
+            "Authentication",
+            "Database",
+            "Logging"
+          ],
+          "single_matched": [
+            "Authentication",
+            "Database",
+            "Logging"
+          ],
+          "matched_match": true,
+          "max_prob_diff": 0.0,
+          "max_margin_diff": 0.0,
+          "batch_probs": {
+            "Authentication": 1.0,
+            "Database": 0.9999,
+            "Logging": 1.0,
+            "FrontendUI": 0.0,
+            "Hardware": 0.0
+          },
+          "single_probs": {
+            "Authentication": 1.0,
+            "Database": 0.9999,
+            "Logging": 1.0,
+            "FrontendUI": 0.0,
+            "Hardware": 0.0
+          }
+        },
+        {
+          "batch_matched": [
+            "Authentication",
+            "Database",
+            "Logging"
+          ],
+          "single_matched": [
+            "Authentication",
+            "Database",
+            "Logging"
+          ],
+          "matched_match": true,
+          "max_prob_diff": 0.0,
+          "max_margin_diff": 0.0,
+          "batch_probs": {
+            "Authentication": 1.0,
+            "Database": 1.0,
+            "Logging": 1.0,
+            "FrontendUI": 0.0,
+            "Hardware": 0.0
+          },
+          "single_probs": {
+            "Authentication": 1.0,
+            "Database": 1.0,
+            "Logging": 1.0,
+            "FrontendUI": 0.0,
+            "Hardware": 0.0
+          }
+        }
+      ]
+    },
+    "phi4-mini:latest": {
+      "evaluate": [
+        {
+          "state_label": "short_1000c",
+          "chars": 1000,
+          "batch_latency_ms": 14604.13,
+          "single_latencies_ms": {
+            "policy_choice": 3834.44,
+            "compliance_score": 3814.01,
+            "mfa_mandatory": 3245.02,
+            "topics": 3596.29
+          },
+          "comparisons": {
+            "choice": {
+              "batch_verdict": "mfa_required",
+              "single_verdict": "mfa_required",
+              "verdict_match": true,
+              "max_prob_diff": 0.0
+            },
+            "score": {
+              "batch_score": 3.434,
+              "single_score": 3.434,
+              "score_diff": 0.0,
+              "max_prob_diff": 0.0
+            },
+            "noul": {
+              "batch_verdict": "Yes",
+              "single_verdict": "Yes",
+              "verdict_match": true,
+              "prob_diff": 0.0,
+              "batch_margin": 4.9944,
+              "single_margin": 4.9944
+            },
+            "multilabel": {
+              "batch_matched": [
+                "Authentication",
+                "Database",
+                "Logging"
+              ],
+              "single_matched": [
+                "Authentication",
+                "Database",
+                "Logging"
+              ],
+              "matched_match": true,
+              "max_prob_diff": 0.0,
+              "max_margin_diff": 0.0
+            }
+          }
+        },
+        {
+          "state_label": "medium_3000c",
+          "chars": 3000,
+          "batch_latency_ms": 35946.36,
+          "single_latencies_ms": {
+            "policy_choice": 8952.4,
+            "compliance_score": 8952.25,
+            "mfa_mandatory": 8614.32,
+            "topics": 9245.65
+          },
+          "comparisons": {
+            "choice": {
+              "batch_verdict": "mfa_required",
+              "single_verdict": "mfa_required",
+              "verdict_match": true,
+              "max_prob_diff": 0.0
+            },
+            "score": {
+              "batch_score": 3.468,
+              "single_score": 3.468,
+              "score_diff": 0.0,
+              "max_prob_diff": 0.0
+            },
+            "noul": {
+              "batch_verdict": "Yes",
+              "single_verdict": "Yes",
+              "verdict_match": true,
+              "prob_diff": 0.0,
+              "batch_margin": 4.8812,
+              "single_margin": 4.8812
+            },
+            "multilabel": {
+              "batch_matched": [
+                "Authentication",
+                "Database",
+                "Logging"
+              ],
+              "single_matched": [
+                "Authentication",
+                "Database",
+                "Logging"
+              ],
+              "matched_match": true,
+              "max_prob_diff": 0.0,
+              "max_margin_diff": 0.0
+            }
+          }
+        }
+      ],
+      "pipeline_multilabel": [
+        {
+          "batch_matched": [
+            "Authentication",
+            "Database",
+            "Logging"
+          ],
+          "single_matched": [
+            "Authentication",
+            "Database",
+            "Logging"
+          ],
+          "matched_match": true,
+          "max_prob_diff": 0.0023,
+          "max_margin_diff": 0.011,
+          "batch_probs": {
+            "Authentication": 0.9959,
+            "Database": 0.8961,
+            "Logging": 0.6656,
+            "FrontendUI": 0.0,
+            "Hardware": 0.0
+          },
+          "single_probs": {
+            "Authentication": 0.9959,
+            "Database": 0.8956,
+            "Logging": 0.6679,
+            "FrontendUI": 0.0,
+            "Hardware": 0.0
+          }
+        },
+        {
+          "batch_matched": [
+            "Authentication",
+            "Database",
+            "Logging"
+          ],
+          "single_matched": [
+            "Authentication",
+            "Database",
+            "Logging"
+          ],
+          "matched_match": true,
+          "max_prob_diff": 0.0005,
+          "max_margin_diff": 0.003,
+          "batch_probs": {
+            "Authentication": 0.9831,
+            "Database": 0.8448,
+            "Logging": 0.8833,
+            "FrontendUI": 0.0,
+            "Hardware": 0.0
+          },
+          "single_probs": {
+            "Authentication": 0.9831,
+            "Database": 0.8443,
+            "Logging": 0.8835,
+            "FrontendUI": 0.0,
+            "Hardware": 0.0
+          }
+        }
+      ]
+    }
+  }
+}
