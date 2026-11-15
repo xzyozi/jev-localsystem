@@ -102,8 +102,8 @@ class PromptBuilder:
             "あなたは超高速な二値判定器です。提示された基準に基づいて、対象テキストが条件に合致するか判定してください。\n"
             "説明や理由は一切不要です。必ず 'Yes' または 'No' のどちらか1単語のみを出力してください。"
         )
-        rule_part = f"\n【判定基準】\n{request.rule_definition}\n" if request.rule_definition else ""
-        user_prompt = f"{rule_part}\n【対象テキスト】\n{request.context_text}\n\n判定結果 (Yes / No):"
+        rule_part = f"\n\n【判定基準】\n{request.rule_definition}" if request.rule_definition else ""
+        user_prompt = f"【対象テキスト】\n{request.context_text}{rule_part}\n\n判定結果 (Yes / No):"
 
         messages = [
             {"role": "system", "content": system_prompt},
@@ -140,10 +140,10 @@ class PromptBuilder:
             "あなたは高精度な単一選択分類器です。提示されたテキストがどの選択肢に最も合致するか判定してください。\n"
             "説明や挨拶は一切出力せず、必ず選択肢のアルファベット記号（A, B, C...）の1文字のみを出力してください。"
         )
-        rule_part = f"\n【分類基準】\n{request.rule_definition}\n" if request.rule_definition else ""
+        rule_part = f"\n\n【分類基準】\n{request.rule_definition}" if request.rule_definition else ""
         user_prompt = (
-            f"{rule_part}\n【選択肢】\n{options_text}\n\n"
-            f"【対象テキスト】\n{request.context_text}\n\n"
+            f"【対象テキスト】\n{request.context_text}{rule_part}\n\n"
+            f"【選択肢】\n{options_text}\n\n"
             f"判定記号 ({', '.join(symbols)}):"
         )
 
@@ -167,8 +167,8 @@ class PromptBuilder:
     ) -> Tuple[List[Dict[str, str]], List[str], Dict[str, str]]:
         levels = request.score_levels
         system_prompt = cls.build_score_system_prompt(levels)
-        rule_part = f"\n【評価基準】\n{request.rule_definition}\n" if request.rule_definition else ""
-        user_prompt = f"{rule_part}\n【対象テキスト】\n{request.context_text}\n\n評価スコア (1-{levels}):"
+        rule_part = f"\n\n【評価基準】\n{request.rule_definition}" if request.rule_definition else ""
+        user_prompt = f"【対象テキスト】\n{request.context_text}{rule_part}\n\n評価スコア (1-{levels}):"
 
         messages = [
             {"role": "system", "content": system_prompt},
@@ -196,10 +196,10 @@ class PromptBuilder:
             "あなたは専門分野分類器です。提示されたテキストが指定のカテゴリ・ラベルに関連しているか判定してください。\n"
             "説明は一切出力せず、関連している場合は 'Yes'、関連していない場合は 'No' の1単語のみを出力してください。"
         )
-        rule_part = f"\n【判定ルール】\n{request.rule_definition}\n" if request.rule_definition else ""
+        rule_part = f"\n\n【判定ルール】\n{request.rule_definition}" if request.rule_definition else ""
         user_prompt = (
-            f"{rule_part}\n【評価カテゴリ】\n{label_to_eval}\n\n"
-            f"【対象テキスト】\n{request.context_text}\n\n"
+            f"【対象テキスト】\n{request.context_text}{rule_part}\n\n"
+            f"【評価カテゴリ】\n{label_to_eval}\n\n"
             f"カテゴリ「{label_to_eval}」に該当しますか？ (Yes / No):"
         )
 

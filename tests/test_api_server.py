@@ -168,3 +168,41 @@ def test_api_validation_error_422(client: TestClient):
     }
     resp = client.post("/api/v1/choice", json=payload_invalid_choice)
     assert resp.status_code == 422
+
+
+def test_api_backend_connection_error_502():
+    """バックエンド接続障害時に HTTP 502 Bad Gateway が返却されること (Issue #21)"""
+    from jev import BackendConnectionError, JudgePipeline, ZeroDecodeClient
+    from jev.server.api.v1.judge import get_pipeline
+    from jev.zero_decode import InferenceBackend
+
+    class _DownBackend(InferenceBackend):
+        @property
+        def is_cloud(self) -> bool:
+            return False
+
+        def forward(self, model, messages, top_logprobs=10):
+            raise BackendConnectionError("Ollama daemon unreachable")
+
+    pipe = JudgePipeline(client=ZeroDecodeClient(backend=_DownBackend()))
+    app.dependency_overrides[get_pipeline] = lambda: pipe
+    try:
+        test_client = TestClient(app)
+        # /api/v1/judge
+        resp = test_client.post(
+            "/api/v1/judge",
+            json={"task_type": "noul", "context_text": "テスト", "rule_definition": "基準"},
+        )
+        assert resp.status_code == 502
+        data = resp.json()
+        assert data["error_type"] == "BackendConnectionError"
+        assert "Ollama daemon unreachable" in data["detail"]
+
+        # /api/v1/noul
+        resp_noul = test_client.post(
+            "/api/v1/noul",
+            json={"context_text": "テスト", "rule_definition": "基準"},
+        )
+        assert resp_noul.status_code == 502
+    finally:
+        app.dependency_overrides.clear()

@@ -79,6 +79,11 @@ related_documents:
   - `logprobs: True`
   - `top_logprobs: 10` （上位候補の対数確率を一括取得。対象トークンの絞り込みは取得後に `ResultMapper` が行う事後正規化であり、`logit_bias` 等による語彙マスキングはバックエンドへ送信しない）
 
+#### 2.3.1 プロンプト構造と Prefill キャッシュ最適化（State-First契約 / Issue #22）
+複数質問バッチ評価（`/api/v1/evaluate`）や Multi-Label における直列推論の高速化のため、`PromptBuilder` は以下の **State-First（対象テキスト先頭固定）** 構造を採用する：
+- **構造**: `【対象テキスト】\n{context_text}` をユーザーメッセージの先頭に固定し、可変の判定基準や質問・選択肢・評価カテゴリを末尾に配置する。
+- **効果**: 因果的アテンション（Causal Attention）の性質により、先頭トークン列の KV キャッシュ（Prompt Cache）が 2問目以降で 100% ヒットし、長文テキスト全体の Prefill 計算をスキップして **2問目以降の推論速度が約 16倍〜31倍高速化** される（実機実測検証済、判定精度への劣化なし）。スワップ検証（A/Bスワップ）時も 2回目の推論で先頭コンテキストのキャッシュが再利用される。
+
 ### 2.4 リソース保護契約（VRAM Manager）
 1. **直列キューイング契約（Issue #8 実証済）**:
    - 単一GPU環境下でのOOMを完全に防止するため、`threading.Semaphore(1)` によるバッチサイズ1のFIFO直列キューイングを強制。
@@ -235,10 +240,11 @@ flowchart TD
 
 | エラー種別 | 検知条件 | パイプラインの振る舞い | クライアントへの返却 |
 | :--- | :--- | :--- | :--- |
-| **`PayloadTooLargeError`** | コンテキスト長が 4,000トークンを超過（ローカル時） | 推論を実行せず前段で即座に遮断 | `status="ERROR"`, `message="Context exceeds 4,000 tokens"` |
-| **`QueueTimeoutError`** | キュー待機時間が 60秒を超過（ローカル時） | リクエストを破棄しGPUリソースを保護 | `status="ERROR"`, `message="VRAM Queue timeout"` |
+| **`PayloadTooLargeError`** | コンテキスト長が 4,000トークンを超過（ローカル時） | 推論を実行せず前段で即座に遮断 | `status="ERROR"`, `message="Context exceeds 4,000 tokens"` (Web API: HTTP 413) |
+| **`QueueTimeoutError`** | キュー待機時間が 60秒を超過（ローカル時） | リクエストを破棄しGPUリソースを保護 | `status="ERROR"`, `message="VRAM Queue timeout"` (Web API: HTTP 504) |
+| **`BackendConnectionError`** | 推論バックエンド（Ollama / OpenAI互換API）への接続失敗・通信障害 | パイプライン内で丸め込まず例外を上位へ伝播 | Web API: HTTP 502 Bad Gateway (`error_type="BackendConnectionError"`) |
 | **`InconclusiveVerdict`** | スワップ検証で結果が不一致（Issue #4） | 偽の判定を下さず引き分けとして検知 | `status="INCONCLUSIVE"`, `verdict=None` |
-| **対象トークン不在（低質量）** | 対象記号群（Yes/No、A〜H、1〜5）の確率質量の合計が `ResultMapper.MIN_TARGET_MASS`（既定 0.1）未満 | 個別トークンの不在は極小値（-20.0）で補完して計算するが、質量合計が下限を下回る場合は正規化結果を採用しない | `status="INCONCLUSIVE"`, `verdict=None`, `confidence=None`, `error_message` に質量を記載 |
+| **対象トークン不在（低質量）** | 対象記号群（Yes/No、A〜H、1〜5）の確率質量の合計が `ResultMapper.MIN_TARGET_MASS`（既定 0.1）未満 | 個別トークンの不在は極小値（-20.0）で補完して計算するが、質量合計が下限を下回る場合は正規化結果を採用しない（Issue #26 実機実測検証済み: 正常時は 90.7%〜100% 集中、思考漏れ時は ~1e-8） | `status="INCONCLUSIVE"`, `verdict=None`, `confidence=None`, `error_message` に質量を記載 |
 
 ---
 
@@ -255,4 +261,7 @@ flowchart TD
 | Rev.1.6 | 2026-10-08 | JEV Architecture Team | リクエスト指定値の検証・反映（Issue #19）。Choice 選択肢数の検証（2〜8）、Multi-Label の threshold/offset 反映、Score 段数（score_levels）の動的化。いずれも既定値は従来どおり（後方互換） |
 | Rev.1.7 | 2026-10-08 | JEV Architecture Team | /api/v1/evaluate の応答仕様（Issue #21 の一部）。status が ERROR / INCONCLUSIVE の質問は、noul を 0.5 などの中立値で埋めず null とし、全タイプで error_message を返す。HTTP ステータス（502 等）の扱いは未決のため別途 |
 | Rev.1.8 | 2026-10-08 | JEV Architecture Team | 内部リファクタ（Issue #23 の一部）。モデル別特性を `model_profiles.py` に集約、`InferenceBackend.forward_constrained`（省略可能な拡張点）で `target_tokens` をバックエンドへ受け渡し、サーバー設定の環境変数をインスタンス生成時に読み込み。外部インターフェース・判定結果は変更なし |
+| Rev.1.9 | 2026-10-31 | JEV Architecture Team | バックエンド障害時のエラー伝播仕様の統一（Issue #21）。`JudgePipeline.judge` が `BackendConnectionError` を捕捉して HTTP 200 (status=ERROR) に丸め込む挙動を是正し上位へ再送出。Web API 層（`/api/v1/judge` 等および `/api/v1/evaluate`）で設計通りの HTTP 502 Bad Gateway を返却するよう改修 |
+| Rev.1.10 | 2026-11-03 | JEV Architecture Team | 対象トークン確率質量下限（`MIN_TARGET_MASS=0.1`）の実機妥当性検証成果反映（Issue #26）。Ollama 上の Tier 1 (`qwen3:8b`) および Tier 2 (`phi4-mini:latest`) において正常時（90.7%〜100%）と異常時（~1e-8）の明確な分離境界および誤検知ゼロを確認、設計値 0.1 を確定 |
+| Rev.1.11 | 2026-11-03 | JEV Architecture Team | 複数質問バッチ評価およびMulti-Labelにおける同一StateのPrefill重複排除（Issue #22）。`PromptBuilder` で不変の対象テキストを先頭に固定する State-First 構造を採用し、Prefix Caching により2問目以降のレイテンシを約16〜31倍高速化（精度劣化なし） |
 

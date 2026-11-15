@@ -1,0 +1,572 @@
+{
+  "timestamp": "2026-11-03T17:05:18+0900",
+  "models": {
+    "qwen3:8b": {
+      "model": "qwen3:8b",
+      "summary": {
+        "noul": {
+          "count": 5,
+          "min": 1.0,
+          "p05": 1.0,
+          "median": 1.0,
+          "p95": 1.0,
+          "max": 1.0,
+          "inconclusive_count": 0
+        },
+        "noul_long_context": {
+          "count": 4,
+          "min": 1.0,
+          "p05": 1.0,
+          "median": 1.0,
+          "p95": 1.0,
+          "max": 1.0,
+          "inconclusive_count": 0
+        },
+        "choice": {
+          "count": 4,
+          "min": 1.0,
+          "p05": 1.0,
+          "median": 1.0,
+          "p95": 1.0,
+          "max": 1.0,
+          "inconclusive_count": 1
+        },
+        "score": {
+          "count": 4,
+          "min": 1.0,
+          "p05": 1.0,
+          "median": 1.0,
+          "p95": 1.0,
+          "max": 1.0,
+          "inconclusive_count": 0
+        },
+        "multilabel": {
+          "count": 15,
+          "min": 1.0,
+          "p05": 1.0,
+          "median": 1.0,
+          "p95": 1.0,
+          "max": 1.0,
+          "inconclusive_count": 0
+        }
+      },
+      "raw_results": {
+        "noul": [
+          {
+            "id": "Noul_Tokyo_Capital",
+            "target_mass": 0.9999999346636284,
+            "status": "SUCCESS",
+            "verdict": "Yes",
+            "confidence": 0.9998,
+            "latency_ms": 492.51137499231845
+          },
+          {
+            "id": "Noul_Sky_Color",
+            "target_mass": 0.9999999704013316,
+            "status": "SUCCESS",
+            "verdict": "Yes",
+            "confidence": 1.0,
+            "latency_ms": 357.6270409976132
+          },
+          {
+            "id": "Noul_Math_Addition",
+            "target_mass": 1.000000003725606,
+            "status": "SUCCESS",
+            "verdict": "No",
+            "confidence": 1.0,
+            "latency_ms": 356.40666700783186
+          },
+          {
+            "id": "Noul_Security_Password",
+            "target_mass": 0.9999999628551093,
+            "status": "SUCCESS",
+            "verdict": "No",
+            "confidence": 1.0,
+            "latency_ms": 362.0559160190169
+          },
+          {
+            "id": "Noul_Python_Dynamic",
+            "target_mass": 0.9999998922831246,
+            "status": "SUCCESS",
+            "verdict": "Yes",
+            "confidence": 1.0,
+            "latency_ms": 357.9649589955807
+          }
+        ],
+        "noul_long_context": [
+          {
+            "id": "Noul_Context_1000c",
+            "label": "1000文字(~330T)",
+            "chars": 1050,
+            "target_mass": 1.000000071495415,
+            "status": "SUCCESS",
+            "verdict": "Yes",
+            "confidence": 0.998,
+            "latency_ms": 4058.843541017268
+          },
+          {
+            "id": "Noul_Context_3000c",
+            "label": "3000文字(~1000T)",
+            "chars": 3050,
+            "target_mass": 0.9999997789514732,
+            "status": "SUCCESS",
+            "verdict": "No",
+            "confidence": 0.9999,
+            "latency_ms": 9414.367042016238
+          },
+          {
+            "id": "Noul_Context_6000c",
+            "label": "6000文字(~2000T SoftLimit)",
+            "chars": 6050,
+            "target_mass": 0.9999922073512694,
+            "status": "SUCCESS",
+            "verdict": "Yes",
+            "confidence": 0.7703,
+            "latency_ms": 244.89679199177772
+          },
+          {
+            "id": "Noul_Context_12000c",
+            "label": "12000文字(~4000T HardLimit)",
+            "chars": 12050,
+            "target_mass": 0.9999923240081557,
+            "status": "SUCCESS",
+            "verdict": "Yes",
+            "confidence": 0.7601,
+            "latency_ms": 91.51908301282674
+          }
+        ],
+        "choice": [
+          {
+            "id": "Choice_Sec_Policy",
+            "fwd_mass": 1.000000002379143,
+            "swap_mass": 1.0000000042880814,
+            "target_mass": 1.000000002379143,
+            "status": "SUCCESS",
+            "verdict": "承認済みVPNと多要素認証を経由した暗号化通信を必須とする",
+            "is_consistent": true
+          },
+          {
+            "id": "Choice_Labor_Law",
+            "fwd_mass": 1.0000000041416834,
+            "swap_mass": 1.0000000022269282,
+            "target_mass": 1.0000000022269282,
+            "status": "SUCCESS",
+            "verdict": "勤怠打刻とPCログを突合し、客観的に労働時間を把握・管理する",
+            "is_consistent": true
+          },
+          {
+            "id": "Choice_Manner_Email",
+            "fwd_mass": 0.9999999807043228,
+            "swap_mass": 1.000000012672216,
+            "target_mass": 0.9999999807043228,
+            "status": "SUCCESS",
+            "verdict": "当方の都合により急な日程変更をお願いすることとなり深くお詫び申し上げます。来週以降で候補日をご教示いただけますでしょうか。",
+            "is_consistent": true
+          },
+          {
+            "id": "Choice_4Way_Framework",
+            "fwd_mass": 1.0000000438081882,
+            "swap_mass": 1.0000000888772826,
+            "target_mass": 1.0000000438081882,
+            "status": "INCONCLUSIVE",
+            "verdict": null,
+            "is_consistent": false
+          }
+        ],
+        "score": [
+          {
+            "id": "Score_High_CleanCode",
+            "target_mass": 1.0000000170956804,
+            "status": "SUCCESS",
+            "verdict": 3.098,
+            "confidence": 0.9032
+          },
+          {
+            "id": "Score_Mid_Functional",
+            "target_mass": 1.0000000169467154,
+            "status": "SUCCESS",
+            "verdict": 2.073,
+            "confidence": 0.9271
+          },
+          {
+            "id": "Score_Low_DirtyCode",
+            "target_mass": 0.9999999691898243,
+            "status": "SUCCESS",
+            "verdict": 1.0,
+            "confidence": 1.0
+          },
+          {
+            "id": "Score_MidHigh_GoodDocs",
+            "target_mass": 1.0000000114525915,
+            "status": "SUCCESS",
+            "verdict": 2.99,
+            "confidence": 0.979
+          }
+        ],
+        "multilabel": [
+          {
+            "id": "ML_DB_Connection_Database",
+            "target_mass": 1.0000000094841421,
+            "status": "SUCCESS"
+          },
+          {
+            "id": "ML_DB_Connection_Network",
+            "target_mass": 1.0000000445531811,
+            "status": "SUCCESS"
+          },
+          {
+            "id": "ML_DB_Connection_Security",
+            "target_mass": 0.9999994858910995,
+            "status": "SUCCESS"
+          },
+          {
+            "id": "ML_DB_Connection_Frontend",
+            "target_mass": 1.000000003853658,
+            "status": "SUCCESS"
+          },
+          {
+            "id": "ML_DB_Connection_Hardware",
+            "target_mass": 1.0000000059328344,
+            "status": "SUCCESS"
+          },
+          {
+            "id": "ML_SQL_Injection_Database",
+            "target_mass": 1.0000000129448317,
+            "status": "SUCCESS"
+          },
+          {
+            "id": "ML_SQL_Injection_Network",
+            "target_mass": 0.9999999291740729,
+            "status": "SUCCESS"
+          },
+          {
+            "id": "ML_SQL_Injection_Security",
+            "target_mass": 1.000000008251533,
+            "status": "SUCCESS"
+          },
+          {
+            "id": "ML_SQL_Injection_Frontend",
+            "target_mass": 1.000000006415191,
+            "status": "SUCCESS"
+          },
+          {
+            "id": "ML_SQL_Injection_Hardware",
+            "target_mass": 1.000000005328325,
+            "status": "SUCCESS"
+          },
+          {
+            "id": "ML_CSS_Broken_Database",
+            "target_mass": 0.9999998878988099,
+            "status": "SUCCESS"
+          },
+          {
+            "id": "ML_CSS_Broken_Network",
+            "target_mass": 0.9999998893891143,
+            "status": "SUCCESS"
+          },
+          {
+            "id": "ML_CSS_Broken_Security",
+            "target_mass": 1.000000016396095,
+            "status": "SUCCESS"
+          },
+          {
+            "id": "ML_CSS_Broken_Frontend",
+            "target_mass": 0.999999752104831,
+            "status": "SUCCESS"
+          },
+          {
+            "id": "ML_CSS_Broken_Hardware",
+            "target_mass": 1.0000000219248888,
+            "status": "SUCCESS"
+          }
+        ]
+      }
+    },
+    "phi4-mini:latest": {
+      "model": "phi4-mini:latest",
+      "summary": {
+        "noul": {
+          "count": 5,
+          "min": 0.989,
+          "p05": 0.9897,
+          "median": 0.9925,
+          "p95": 0.9992,
+          "max": 0.9994,
+          "inconclusive_count": 0
+        },
+        "noul_long_context": {
+          "count": 4,
+          "min": 0.9678,
+          "p05": 0.9699,
+          "median": 0.9898,
+          "p95": 0.9985,
+          "max": 0.9987,
+          "inconclusive_count": 0
+        },
+        "choice": {
+          "count": 4,
+          "min": 0.9995,
+          "p05": 0.9995,
+          "median": 0.9997,
+          "p95": 0.9998,
+          "max": 0.9998,
+          "inconclusive_count": 1
+        },
+        "score": {
+          "count": 4,
+          "min": 0.9938,
+          "p05": 0.994,
+          "median": 0.9961,
+          "p95": 0.9981,
+          "max": 0.9982,
+          "inconclusive_count": 0
+        },
+        "multilabel": {
+          "count": 15,
+          "min": 0.9069,
+          "p05": 0.9244,
+          "median": 0.9874,
+          "p95": 0.9982,
+          "max": 0.9982,
+          "inconclusive_count": 0
+        }
+      },
+      "raw_results": {
+        "noul": [
+          {
+            "id": "Noul_Tokyo_Capital",
+            "target_mass": 0.989047962480553,
+            "status": "SUCCESS",
+            "verdict": "No",
+            "confidence": 0.6812,
+            "latency_ms": 3999.0687079844065
+          },
+          {
+            "id": "Noul_Sky_Color",
+            "target_mass": 0.992459949019291,
+            "status": "SUCCESS",
+            "verdict": "No",
+            "confidence": 0.9237,
+            "latency_ms": 188.41783399693668
+          },
+          {
+            "id": "Noul_Math_Addition",
+            "target_mass": 0.9985841574451366,
+            "status": "SUCCESS",
+            "verdict": "No",
+            "confidence": 1.0,
+            "latency_ms": 182.68154200632125
+          },
+          {
+            "id": "Noul_Security_Password",
+            "target_mass": 0.9993870262812508,
+            "status": "SUCCESS",
+            "verdict": "No",
+            "confidence": 1.0,
+            "latency_ms": 182.5839169905521
+          },
+          {
+            "id": "Noul_Python_Dynamic",
+            "target_mass": 0.992312959259469,
+            "status": "SUCCESS",
+            "verdict": "No",
+            "confidence": 0.8419,
+            "latency_ms": 180.622666986892
+          }
+        ],
+        "noul_long_context": [
+          {
+            "id": "Noul_Context_1000c",
+            "label": "1000文字(~330T)",
+            "chars": 1050,
+            "target_mass": 0.9987173943600649,
+            "status": "SUCCESS",
+            "verdict": "No",
+            "confidence": 0.9999,
+            "latency_ms": 2150.6039170199074
+          },
+          {
+            "id": "Noul_Context_3000c",
+            "label": "3000文字(~1000T)",
+            "chars": 3050,
+            "target_mass": 0.9975449504114856,
+            "status": "SUCCESS",
+            "verdict": "No",
+            "confidence": 1.0,
+            "latency_ms": 5580.400083010318
+          },
+          {
+            "id": "Noul_Context_6000c",
+            "label": "6000文字(~2000T SoftLimit)",
+            "chars": 6050,
+            "target_mass": 0.9820459093749494,
+            "status": "SUCCESS",
+            "verdict": "No",
+            "confidence": 0.9662,
+            "latency_ms": 6160.911584011046
+          },
+          {
+            "id": "Noul_Context_12000c",
+            "label": "12000文字(~4000T HardLimit)",
+            "chars": 12050,
+            "target_mass": 0.9678130392223775,
+            "status": "SUCCESS",
+            "verdict": "No",
+            "confidence": 0.8844,
+            "latency_ms": 6259.551708004437
+          }
+        ],
+        "choice": [
+          {
+            "id": "Choice_Sec_Policy",
+            "fwd_mass": 0.9997488970748319,
+            "swap_mass": 0.999820415099866,
+            "target_mass": 0.9997488970748319,
+            "status": "SUCCESS",
+            "verdict": "承認済みVPNと多要素認証を経由した暗号化通信を必須とする",
+            "is_consistent": true
+          },
+          {
+            "id": "Choice_Labor_Law",
+            "fwd_mass": 0.9994733008174153,
+            "swap_mass": 0.9999439748148335,
+            "target_mass": 0.9994733008174153,
+            "status": "SUCCESS",
+            "verdict": "勤怠打刻とPCログを突合し、客観的に労働時間を把握・管理する",
+            "is_consistent": true
+          },
+          {
+            "id": "Choice_Manner_Email",
+            "fwd_mass": 0.9999150746772467,
+            "swap_mass": 0.9998471551236494,
+            "target_mass": 0.9998471551236494,
+            "status": "INCONCLUSIVE",
+            "verdict": null,
+            "is_consistent": false
+          },
+          {
+            "id": "Choice_4Way_Framework",
+            "fwd_mass": 0.9997050620393668,
+            "swap_mass": 0.999945740240369,
+            "target_mass": 0.9997050620393668,
+            "status": "SUCCESS",
+            "verdict": "FastAPI (ASGIネイティブ・型安全)",
+            "is_consistent": true
+          }
+        ],
+        "score": [
+          {
+            "id": "Score_High_CleanCode",
+            "target_mass": 0.9938260006015324,
+            "status": "SUCCESS",
+            "verdict": 4.106,
+            "confidence": 0.8551
+          },
+          {
+            "id": "Score_Mid_Functional",
+            "target_mass": 0.9947565528331096,
+            "status": "SUCCESS",
+            "verdict": 1.697,
+            "confidence": 0.6962
+          },
+          {
+            "id": "Score_Low_DirtyCode",
+            "target_mass": 0.997408148347732,
+            "status": "SUCCESS",
+            "verdict": 1.0,
+            "confidence": 0.9999
+          },
+          {
+            "id": "Score_MidHigh_GoodDocs",
+            "target_mass": 0.9981787922543521,
+            "status": "SUCCESS",
+            "verdict": 2.021,
+            "confidence": 0.885
+          }
+        ],
+        "multilabel": [
+          {
+            "id": "ML_DB_Connection_Database",
+            "target_mass": 0.9552547831341726,
+            "status": "SUCCESS"
+          },
+          {
+            "id": "ML_DB_Connection_Network",
+            "target_mass": 0.9371543486161964,
+            "status": "SUCCESS"
+          },
+          {
+            "id": "ML_DB_Connection_Security",
+            "target_mass": 0.9068676701770888,
+            "status": "SUCCESS"
+          },
+          {
+            "id": "ML_DB_Connection_Frontend",
+            "target_mass": 0.9946311817520297,
+            "status": "SUCCESS"
+          },
+          {
+            "id": "ML_DB_Connection_Hardware",
+            "target_mass": 0.9874395021250385,
+            "status": "SUCCESS"
+          },
+          {
+            "id": "ML_SQL_Injection_Database",
+            "target_mass": 0.9664802593481635,
+            "status": "SUCCESS"
+          },
+          {
+            "id": "ML_SQL_Injection_Network",
+            "target_mass": 0.9779399062860786,
+            "status": "SUCCESS"
+          },
+          {
+            "id": "ML_SQL_Injection_Security",
+            "target_mass": 0.9570445982847748,
+            "status": "SUCCESS"
+          },
+          {
+            "id": "ML_SQL_Injection_Frontend",
+            "target_mass": 0.9942946552372152,
+            "status": "SUCCESS"
+          },
+          {
+            "id": "ML_SQL_Injection_Hardware",
+            "target_mass": 0.9957081334353339,
+            "status": "SUCCESS"
+          },
+          {
+            "id": "ML_CSS_Broken_Database",
+            "target_mass": 0.9965318975381,
+            "status": "SUCCESS"
+          },
+          {
+            "id": "ML_CSS_Broken_Network",
+            "target_mass": 0.9981962514904124,
+            "status": "SUCCESS"
+          },
+          {
+            "id": "ML_CSS_Broken_Security",
+            "target_mass": 0.998209547148692,
+            "status": "SUCCESS"
+          },
+          {
+            "id": "ML_CSS_Broken_Frontend",
+            "target_mass": 0.9318981657243206,
+            "status": "SUCCESS"
+          },
+          {
+            "id": "ML_CSS_Broken_Hardware",
+            "target_mass": 0.9958252984372619,
+            "status": "SUCCESS"
+          }
+        ]
+      }
+    }
+  },
+  "no_prefill_experiment": {
+    "first_token": "",
+    "top_tokens": [],
+    "target_mass": 8.244614489754231e-09
+  }
+}

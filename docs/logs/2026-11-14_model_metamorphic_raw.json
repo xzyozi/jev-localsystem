@@ -1,0 +1,631 @@
+{
+  "timestamp": "2026-11-14T23:06:27+0900",
+  "models": {
+    "qwen3:8b": {
+      "model": "qwen3:8b",
+      "polarity_flip": {
+        "total_pairs": 5,
+        "flip_consistency_rate": 100.0,
+        "both_correct_rate": 100.0,
+        "margin_sign_flip_rate": 100.0,
+        "cases": [
+          {
+            "id": "MFA_Mandatory",
+            "pos_status": "SUCCESS",
+            "neg_status": "SUCCESS",
+            "pos_verdict": "Yes",
+            "neg_verdict": "No",
+            "pos_margin": 19.9804,
+            "neg_margin": -19.9999,
+            "flipped": true,
+            "both_correct": true,
+            "margin_sign_flipped": true
+          },
+          {
+            "id": "Shared_Account_Prohibition",
+            "pos_status": "SUCCESS",
+            "neg_status": "SUCCESS",
+            "pos_verdict": "Yes",
+            "neg_verdict": "No",
+            "pos_margin": 19.9909,
+            "neg_margin": -19.9948,
+            "flipped": true,
+            "both_correct": true,
+            "margin_sign_flipped": true
+          },
+          {
+            "id": "Audit_Log_Retention",
+            "pos_status": "SUCCESS",
+            "neg_status": "SUCCESS",
+            "pos_verdict": "Yes",
+            "neg_verdict": "No",
+            "pos_margin": 13.7058,
+            "neg_margin": -19.3368,
+            "flipped": true,
+            "both_correct": true,
+            "margin_sign_flipped": true
+          },
+          {
+            "id": "PII_External_Transfer",
+            "pos_status": "SUCCESS",
+            "neg_status": "SUCCESS",
+            "pos_verdict": "Yes",
+            "neg_verdict": "No",
+            "pos_margin": 18.4681,
+            "neg_margin": -13.5834,
+            "flipped": true,
+            "both_correct": true,
+            "margin_sign_flipped": true
+          },
+          {
+            "id": "Backup_Completed",
+            "pos_status": "SUCCESS",
+            "neg_status": "SUCCESS",
+            "pos_verdict": "Yes",
+            "neg_verdict": "No",
+            "pos_margin": 19.3069,
+            "neg_margin": -19.9951,
+            "flipped": true,
+            "both_correct": true,
+            "margin_sign_flipped": true
+          }
+        ]
+      },
+      "choice_cyclic": {
+        "total_cases": 4,
+        "total_shifts": 14,
+        "cyclic_consistency_rate": 100.0,
+        "correct_cyclic_rate": 100.0,
+        "shift_accuracy_rate": 100.0,
+        "cases": [
+          {
+            "id": "Auth_Policy_4Choice",
+            "num_choices": 4,
+            "ground_truth": "多要素認証と個人IDを必須とする",
+            "shift_statuses": [
+              "SUCCESS",
+              "SUCCESS",
+              "SUCCESS",
+              "SUCCESS"
+            ],
+            "shift_verdicts": [
+              "多要素認証と個人IDを必須とする",
+              "多要素認証と個人IDを必須とする",
+              "多要素認証と個人IDを必須とする",
+              "多要素認証と個人IDを必須とする"
+            ],
+            "cyclic_invariant": true,
+            "correct_invariant": true
+          },
+          {
+            "id": "Incident_SLA_4Choice",
+            "num_choices": 4,
+            "ground_truth": "30秒以内",
+            "shift_statuses": [
+              "SUCCESS",
+              "SUCCESS",
+              "SUCCESS",
+              "SUCCESS"
+            ],
+            "shift_verdicts": [
+              "30秒以内",
+              "30秒以内",
+              "30秒以内",
+              "30秒以内"
+            ],
+            "cyclic_invariant": true,
+            "correct_invariant": true
+          },
+          {
+            "id": "Log_Retention_3Choice",
+            "num_choices": 3,
+            "ground_truth": "最低7年間保管",
+            "shift_statuses": [
+              "SUCCESS",
+              "SUCCESS",
+              "SUCCESS"
+            ],
+            "shift_verdicts": [
+              "最低7年間保管",
+              "最低7年間保管",
+              "最低7年間保管"
+            ],
+            "cyclic_invariant": true,
+            "correct_invariant": true
+          },
+          {
+            "id": "Deployment_Window_3Choice",
+            "num_choices": 3,
+            "ground_truth": "金曜夕方および休前日",
+            "shift_statuses": [
+              "SUCCESS",
+              "SUCCESS",
+              "SUCCESS"
+            ],
+            "shift_verdicts": [
+              "金曜夕方および休前日",
+              "金曜夕方および休前日",
+              "金曜夕方および休前日"
+            ],
+            "cyclic_invariant": true,
+            "correct_invariant": true
+          }
+        ]
+      },
+      "noise_robustness": {
+        "total_variants": 12,
+        "verdict_preservation_rate": 100.0,
+        "max_confidence_delta": 0.0,
+        "avg_confidence_delta": 0.0,
+        "max_margin_delta": 0.6931,
+        "cases": [
+          {
+            "id": "Noise_Noul_MFA",
+            "task_type": "noul",
+            "base_status": "SUCCESS",
+            "base_verdict": "Yes",
+            "base_confidence": 1.0,
+            "base_margin": 20.0,
+            "all_preserved": true,
+            "variants": {
+              "whitespace_width": {
+                "status": "SUCCESS",
+                "verdict": "Yes",
+                "preserved": true,
+                "confidence": 1.0,
+                "conf_delta": 0.0,
+                "margin": 20.0,
+                "margin_delta": 0.0
+              },
+              "newline_format": {
+                "status": "SUCCESS",
+                "verdict": "Yes",
+                "preserved": true,
+                "confidence": 1.0,
+                "conf_delta": 0.0,
+                "margin": 19.9998,
+                "margin_delta": 0.0002
+              },
+              "irrelevant_tail_note": {
+                "status": "SUCCESS",
+                "verdict": "Yes",
+                "preserved": true,
+                "confidence": 1.0,
+                "conf_delta": 0.0,
+                "margin": 19.3069,
+                "margin_delta": 0.6931
+              }
+            }
+          },
+          {
+            "id": "Noise_Noul_Retention",
+            "task_type": "noul",
+            "base_status": "SUCCESS",
+            "base_verdict": "No",
+            "base_confidence": 1.0,
+            "base_margin": -19.9987,
+            "all_preserved": true,
+            "variants": {
+              "whitespace_width": {
+                "status": "SUCCESS",
+                "verdict": "No",
+                "preserved": true,
+                "confidence": 1.0,
+                "conf_delta": 0.0,
+                "margin": -19.9989,
+                "margin_delta": 0.0002
+              },
+              "newline_format": {
+                "status": "SUCCESS",
+                "verdict": "No",
+                "preserved": true,
+                "confidence": 1.0,
+                "conf_delta": 0.0,
+                "margin": -19.9987,
+                "margin_delta": 0.0
+              },
+              "irrelevant_tail_note": {
+                "status": "SUCCESS",
+                "verdict": "No",
+                "preserved": true,
+                "confidence": 1.0,
+                "conf_delta": 0.0,
+                "margin": -19.9987,
+                "margin_delta": 0.0
+              }
+            }
+          },
+          {
+            "id": "Noise_Choice_Failover",
+            "task_type": "choice",
+            "base_status": "SUCCESS",
+            "base_verdict": "30秒以内",
+            "base_confidence": 1.0,
+            "base_margin": null,
+            "all_preserved": true,
+            "variants": {
+              "whitespace_width": {
+                "status": "SUCCESS",
+                "verdict": "30秒以内",
+                "preserved": true,
+                "confidence": 1.0,
+                "conf_delta": 0.0,
+                "margin": null,
+                "margin_delta": null
+              },
+              "newline_format": {
+                "status": "SUCCESS",
+                "verdict": "30秒以内",
+                "preserved": true,
+                "confidence": 1.0,
+                "conf_delta": 0.0,
+                "margin": null,
+                "margin_delta": null
+              },
+              "irrelevant_tail_note": {
+                "status": "SUCCESS",
+                "verdict": "30秒以内",
+                "preserved": true,
+                "confidence": 1.0,
+                "conf_delta": 0.0,
+                "margin": null,
+                "margin_delta": null
+              }
+            }
+          },
+          {
+            "id": "Noise_Choice_Auth",
+            "task_type": "choice",
+            "base_status": "SUCCESS",
+            "base_verdict": "16文字以上",
+            "base_confidence": 1.0,
+            "base_margin": null,
+            "all_preserved": true,
+            "variants": {
+              "whitespace_width": {
+                "status": "SUCCESS",
+                "verdict": "16文字以上",
+                "preserved": true,
+                "confidence": 1.0,
+                "conf_delta": 0.0,
+                "margin": null,
+                "margin_delta": null
+              },
+              "newline_format": {
+                "status": "SUCCESS",
+                "verdict": "16文字以上",
+                "preserved": true,
+                "confidence": 1.0,
+                "conf_delta": 0.0,
+                "margin": null,
+                "margin_delta": null
+              },
+              "irrelevant_tail_note": {
+                "status": "SUCCESS",
+                "verdict": "16文字以上",
+                "preserved": true,
+                "confidence": 1.0,
+                "conf_delta": 0.0,
+                "margin": null,
+                "margin_delta": null
+              }
+            }
+          }
+        ]
+      }
+    },
+    "phi4-mini:latest": {
+      "model": "phi4-mini:latest",
+      "polarity_flip": {
+        "total_pairs": 5,
+        "flip_consistency_rate": 100.0,
+        "both_correct_rate": 100.0,
+        "margin_sign_flip_rate": 100.0,
+        "cases": [
+          {
+            "id": "MFA_Mandatory",
+            "pos_status": "SUCCESS",
+            "neg_status": "SUCCESS",
+            "pos_verdict": "Yes",
+            "neg_verdict": "No",
+            "pos_margin": 7.0847,
+            "neg_margin": -8.2567,
+            "flipped": true,
+            "both_correct": true,
+            "margin_sign_flipped": true
+          },
+          {
+            "id": "Shared_Account_Prohibition",
+            "pos_status": "SUCCESS",
+            "neg_status": "SUCCESS",
+            "pos_verdict": "Yes",
+            "neg_verdict": "No",
+            "pos_margin": 3.6768,
+            "neg_margin": -9.4898,
+            "flipped": true,
+            "both_correct": true,
+            "margin_sign_flipped": true
+          },
+          {
+            "id": "Audit_Log_Retention",
+            "pos_status": "SUCCESS",
+            "neg_status": "SUCCESS",
+            "pos_verdict": "Yes",
+            "neg_verdict": "No",
+            "pos_margin": 7.5406,
+            "neg_margin": -4.5005,
+            "flipped": true,
+            "both_correct": true,
+            "margin_sign_flipped": true
+          },
+          {
+            "id": "PII_External_Transfer",
+            "pos_status": "SUCCESS",
+            "neg_status": "SUCCESS",
+            "pos_verdict": "Yes",
+            "neg_verdict": "No",
+            "pos_margin": 3.0288,
+            "neg_margin": -7.3605,
+            "flipped": true,
+            "both_correct": true,
+            "margin_sign_flipped": true
+          },
+          {
+            "id": "Backup_Completed",
+            "pos_status": "SUCCESS",
+            "neg_status": "SUCCESS",
+            "pos_verdict": "Yes",
+            "neg_verdict": "No",
+            "pos_margin": 8.2305,
+            "neg_margin": -5.0874,
+            "flipped": true,
+            "both_correct": true,
+            "margin_sign_flipped": true
+          }
+        ]
+      },
+      "choice_cyclic": {
+        "total_cases": 4,
+        "total_shifts": 14,
+        "cyclic_consistency_rate": 100.0,
+        "correct_cyclic_rate": 100.0,
+        "shift_accuracy_rate": 100.0,
+        "cases": [
+          {
+            "id": "Auth_Policy_4Choice",
+            "num_choices": 4,
+            "ground_truth": "多要素認証と個人IDを必須とする",
+            "shift_statuses": [
+              "SUCCESS",
+              "SUCCESS",
+              "SUCCESS",
+              "SUCCESS"
+            ],
+            "shift_verdicts": [
+              "多要素認証と個人IDを必須とする",
+              "多要素認証と個人IDを必須とする",
+              "多要素認証と個人IDを必須とする",
+              "多要素認証と個人IDを必須とする"
+            ],
+            "cyclic_invariant": true,
+            "correct_invariant": true
+          },
+          {
+            "id": "Incident_SLA_4Choice",
+            "num_choices": 4,
+            "ground_truth": "30秒以内",
+            "shift_statuses": [
+              "SUCCESS",
+              "SUCCESS",
+              "SUCCESS",
+              "SUCCESS"
+            ],
+            "shift_verdicts": [
+              "30秒以内",
+              "30秒以内",
+              "30秒以内",
+              "30秒以内"
+            ],
+            "cyclic_invariant": true,
+            "correct_invariant": true
+          },
+          {
+            "id": "Log_Retention_3Choice",
+            "num_choices": 3,
+            "ground_truth": "最低7年間保管",
+            "shift_statuses": [
+              "SUCCESS",
+              "SUCCESS",
+              "SUCCESS"
+            ],
+            "shift_verdicts": [
+              "最低7年間保管",
+              "最低7年間保管",
+              "最低7年間保管"
+            ],
+            "cyclic_invariant": true,
+            "correct_invariant": true
+          },
+          {
+            "id": "Deployment_Window_3Choice",
+            "num_choices": 3,
+            "ground_truth": "金曜夕方および休前日",
+            "shift_statuses": [
+              "SUCCESS",
+              "SUCCESS",
+              "SUCCESS"
+            ],
+            "shift_verdicts": [
+              "金曜夕方および休前日",
+              "金曜夕方および休前日",
+              "金曜夕方および休前日"
+            ],
+            "cyclic_invariant": true,
+            "correct_invariant": true
+          }
+        ]
+      },
+      "noise_robustness": {
+        "total_variants": 12,
+        "verdict_preservation_rate": 100.0,
+        "max_confidence_delta": 0.002,
+        "avg_confidence_delta": 0.00037,
+        "max_margin_delta": 1.6819,
+        "cases": [
+          {
+            "id": "Noise_Noul_MFA",
+            "task_type": "noul",
+            "base_status": "SUCCESS",
+            "base_verdict": "Yes",
+            "base_confidence": 0.9998,
+            "base_margin": 8.572,
+            "all_preserved": true,
+            "variants": {
+              "whitespace_width": {
+                "status": "SUCCESS",
+                "verdict": "Yes",
+                "preserved": true,
+                "confidence": 0.9994,
+                "conf_delta": 0.0004,
+                "margin": 7.3899,
+                "margin_delta": 1.1821
+              },
+              "newline_format": {
+                "status": "SUCCESS",
+                "verdict": "Yes",
+                "preserved": true,
+                "confidence": 0.9999,
+                "conf_delta": 0.0001,
+                "margin": 8.8709,
+                "margin_delta": 0.2989
+              },
+              "irrelevant_tail_note": {
+                "status": "SUCCESS",
+                "verdict": "Yes",
+                "preserved": true,
+                "confidence": 0.999,
+                "conf_delta": 0.0008,
+                "margin": 6.8901,
+                "margin_delta": 1.6819
+              }
+            }
+          },
+          {
+            "id": "Noise_Noul_Retention",
+            "task_type": "noul",
+            "base_status": "SUCCESS",
+            "base_verdict": "No",
+            "base_confidence": 0.9962,
+            "base_margin": -5.5643,
+            "all_preserved": true,
+            "variants": {
+              "whitespace_width": {
+                "status": "SUCCESS",
+                "verdict": "No",
+                "preserved": true,
+                "confidence": 0.9973,
+                "conf_delta": 0.0011,
+                "margin": -5.9238,
+                "margin_delta": 0.3595
+              },
+              "newline_format": {
+                "status": "SUCCESS",
+                "verdict": "No",
+                "preserved": true,
+                "confidence": 0.9962,
+                "conf_delta": 0.0,
+                "margin": -5.5643,
+                "margin_delta": 0.0
+              },
+              "irrelevant_tail_note": {
+                "status": "SUCCESS",
+                "verdict": "No",
+                "preserved": true,
+                "confidence": 0.9942,
+                "conf_delta": 0.002,
+                "margin": -5.147,
+                "margin_delta": 0.4173
+              }
+            }
+          },
+          {
+            "id": "Noise_Choice_Failover",
+            "task_type": "choice",
+            "base_status": "SUCCESS",
+            "base_verdict": "30秒以内",
+            "base_confidence": 1.0,
+            "base_margin": null,
+            "all_preserved": true,
+            "variants": {
+              "whitespace_width": {
+                "status": "SUCCESS",
+                "verdict": "30秒以内",
+                "preserved": true,
+                "confidence": 1.0,
+                "conf_delta": 0.0,
+                "margin": null,
+                "margin_delta": null
+              },
+              "newline_format": {
+                "status": "SUCCESS",
+                "verdict": "30秒以内",
+                "preserved": true,
+                "confidence": 1.0,
+                "conf_delta": 0.0,
+                "margin": null,
+                "margin_delta": null
+              },
+              "irrelevant_tail_note": {
+                "status": "SUCCESS",
+                "verdict": "30秒以内",
+                "preserved": true,
+                "confidence": 1.0,
+                "conf_delta": 0.0,
+                "margin": null,
+                "margin_delta": null
+              }
+            }
+          },
+          {
+            "id": "Noise_Choice_Auth",
+            "task_type": "choice",
+            "base_status": "SUCCESS",
+            "base_verdict": "16文字以上",
+            "base_confidence": 1.0,
+            "base_margin": null,
+            "all_preserved": true,
+            "variants": {
+              "whitespace_width": {
+                "status": "SUCCESS",
+                "verdict": "16文字以上",
+                "preserved": true,
+                "confidence": 1.0,
+                "conf_delta": 0.0,
+                "margin": null,
+                "margin_delta": null
+              },
+              "newline_format": {
+                "status": "SUCCESS",
+                "verdict": "16文字以上",
+                "preserved": true,
+                "confidence": 1.0,
+                "conf_delta": 0.0,
+                "margin": null,
+                "margin_delta": null
+              },
+              "irrelevant_tail_note": {
+                "status": "SUCCESS",
+                "verdict": "16文字以上",
+                "preserved": true,
+                "confidence": 1.0,
+                "conf_delta": 0.0,
+                "margin": null,
+                "margin_delta": null
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

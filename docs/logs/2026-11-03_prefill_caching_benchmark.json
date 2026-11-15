@@ -1,0 +1,729 @@
+{
+  "timestamp": "2026-11-04T07:55:50+0900",
+  "models": {
+    "qwen3:8b": {
+      "~500T (1,500文字)": {
+        "1_questions": {
+          "query_first": {
+            "latencies": [
+              6925.82
+            ],
+            "first_latency_ms": 6925.82,
+            "avg_subsequent_ms": 6925.82,
+            "total_latency_ms": 6925.82,
+            "verdicts": [
+              "Yes"
+            ]
+          },
+          "state_first": {
+            "latencies": [
+              6925.01
+            ],
+            "first_latency_ms": 6925.01,
+            "avg_subsequent_ms": 6925.01,
+            "total_latency_ms": 6925.01,
+            "verdicts": [
+              "Yes"
+            ]
+          },
+          "speedup_total": 1.0,
+          "speedup_subsequent": 1.0
+        },
+        "4_questions": {
+          "query_first": {
+            "latencies": [
+              7203.74,
+              6039.59,
+              6302.49,
+              6471.87
+            ],
+            "first_latency_ms": 7203.74,
+            "avg_subsequent_ms": 6271.32,
+            "total_latency_ms": 26017.69,
+            "verdicts": [
+              "Yes",
+              "No",
+              "No",
+              "Yes"
+            ]
+          },
+          "state_first": {
+            "latencies": [
+              7285.31,
+              375.26,
+              372.44,
+              372.02
+            ],
+            "first_latency_ms": 7285.31,
+            "avg_subsequent_ms": 373.24,
+            "total_latency_ms": 8405.03,
+            "verdicts": [
+              "Yes",
+              "No",
+              "No",
+              "Yes"
+            ]
+          },
+          "speedup_total": 3.1,
+          "speedup_subsequent": 16.8
+        },
+        "8_questions": {
+          "query_first": {
+            "latencies": [
+              7182.94,
+              6615.23,
+              6793.2,
+              6932.48,
+              6971.1,
+              7156.12,
+              7127.3,
+              7240.45
+            ],
+            "first_latency_ms": 7182.94,
+            "avg_subsequent_ms": 6976.55,
+            "total_latency_ms": 56018.82,
+            "verdicts": [
+              "Yes",
+              "No",
+              "No",
+              "Yes",
+              "No",
+              "No",
+              "Yes",
+              "No"
+            ]
+          },
+          "state_first": {
+            "latencies": [
+              9210.41,
+              411.11,
+              401.31,
+              407.85,
+              234.64,
+              410.74,
+              407.43,
+              228.77
+            ],
+            "first_latency_ms": 9210.41,
+            "avg_subsequent_ms": 357.41,
+            "total_latency_ms": 11712.26,
+            "verdicts": [
+              "Yes",
+              "No",
+              "No",
+              "Yes",
+              "No",
+              "No",
+              "Yes",
+              "Yes"
+            ]
+          },
+          "speedup_total": 4.78,
+          "speedup_subsequent": 19.52
+        }
+      },
+      "~2,000T (6,000文字)": {
+        "1_questions": {
+          "query_first": {
+            "latencies": [
+              1102.31
+            ],
+            "first_latency_ms": 1102.31,
+            "avg_subsequent_ms": 1102.31,
+            "total_latency_ms": 1102.31,
+            "verdicts": [
+              "Yes"
+            ]
+          },
+          "state_first": {
+            "latencies": [
+              1100.04
+            ],
+            "first_latency_ms": 1100.04,
+            "avg_subsequent_ms": 1100.04,
+            "total_latency_ms": 1100.04,
+            "verdicts": [
+              "Yes"
+            ]
+          },
+          "speedup_total": 1.0,
+          "speedup_subsequent": 1.0
+        },
+        "4_questions": {
+          "query_first": {
+            "latencies": [
+              1098.34,
+              75.37,
+              72.33,
+              71.23
+            ],
+            "first_latency_ms": 1098.34,
+            "avg_subsequent_ms": 72.98,
+            "total_latency_ms": 1317.27,
+            "verdicts": [
+              "Yes",
+              "Yes",
+              "Yes",
+              "Yes"
+            ]
+          },
+          "state_first": {
+            "latencies": [
+              1093.24,
+              73.71,
+              70.82,
+              70.41
+            ],
+            "first_latency_ms": 1093.24,
+            "avg_subsequent_ms": 71.65,
+            "total_latency_ms": 1308.18,
+            "verdicts": [
+              "Yes",
+              "Yes",
+              "Yes",
+              "Yes"
+            ]
+          },
+          "speedup_total": 1.01,
+          "speedup_subsequent": 1.02
+        },
+        "8_questions": {
+          "query_first": {
+            "latencies": [
+              1095.91,
+              73.4,
+              71.63,
+              70.99,
+              70.85,
+              73.18,
+              74.69,
+              72.51
+            ],
+            "first_latency_ms": 1095.91,
+            "avg_subsequent_ms": 72.46,
+            "total_latency_ms": 1603.16,
+            "verdicts": [
+              "Yes",
+              "Yes",
+              "Yes",
+              "Yes",
+              "Yes",
+              "Yes",
+              "Yes",
+              "Yes"
+            ]
+          },
+          "state_first": {
+            "latencies": [
+              1098.43,
+              76.95,
+              72.38,
+              72.14,
+              71.1,
+              70.97,
+              71.07,
+              71.05
+            ],
+            "first_latency_ms": 1098.43,
+            "avg_subsequent_ms": 72.24,
+            "total_latency_ms": 1604.09,
+            "verdicts": [
+              "Yes",
+              "Yes",
+              "Yes",
+              "Yes",
+              "Yes",
+              "Yes",
+              "Yes",
+              "Yes"
+            ]
+          },
+          "speedup_total": 1.0,
+          "speedup_subsequent": 1.0
+        }
+      },
+      "~4,000T (12,000文字)": {
+        "1_questions": {
+          "query_first": {
+            "latencies": [
+              1381.66
+            ],
+            "first_latency_ms": 1381.66,
+            "avg_subsequent_ms": 1381.66,
+            "total_latency_ms": 1381.66,
+            "verdicts": [
+              "Yes"
+            ]
+          },
+          "state_first": {
+            "latencies": [
+              1108.14
+            ],
+            "first_latency_ms": 1108.14,
+            "avg_subsequent_ms": 1108.14,
+            "total_latency_ms": 1108.14,
+            "verdicts": [
+              "Yes"
+            ]
+          },
+          "speedup_total": 1.25,
+          "speedup_subsequent": 1.25
+        },
+        "4_questions": {
+          "query_first": {
+            "latencies": [
+              1104.3,
+              79.29,
+              77.36,
+              77.93
+            ],
+            "first_latency_ms": 1104.3,
+            "avg_subsequent_ms": 78.19,
+            "total_latency_ms": 1338.88,
+            "verdicts": [
+              "Yes",
+              "Yes",
+              "Yes",
+              "Yes"
+            ]
+          },
+          "state_first": {
+            "latencies": [
+              1104.77,
+              79.18,
+              77.98,
+              77.67
+            ],
+            "first_latency_ms": 1104.77,
+            "avg_subsequent_ms": 78.28,
+            "total_latency_ms": 1339.6,
+            "verdicts": [
+              "Yes",
+              "Yes",
+              "Yes",
+              "Yes"
+            ]
+          },
+          "speedup_total": 1.0,
+          "speedup_subsequent": 1.0
+        },
+        "8_questions": {
+          "query_first": {
+            "latencies": [
+              1399.92,
+              115.13,
+              84.01,
+              78.34,
+              78.98,
+              78.2,
+              77.98,
+              79.47
+            ],
+            "first_latency_ms": 1399.92,
+            "avg_subsequent_ms": 84.59,
+            "total_latency_ms": 1992.03,
+            "verdicts": [
+              "Yes",
+              "Yes",
+              "Yes",
+              "Yes",
+              "Yes",
+              "Yes",
+              "Yes",
+              "Yes"
+            ]
+          },
+          "state_first": {
+            "latencies": [
+              1110.65,
+              83.51,
+              79.34,
+              83.32,
+              91.76,
+              81.45,
+              81.89,
+              80.57
+            ],
+            "first_latency_ms": 1110.65,
+            "avg_subsequent_ms": 83.12,
+            "total_latency_ms": 1692.49,
+            "verdicts": [
+              "Yes",
+              "Yes",
+              "Yes",
+              "Yes",
+              "Yes",
+              "Yes",
+              "Yes",
+              "Yes"
+            ]
+          },
+          "speedup_total": 1.18,
+          "speedup_subsequent": 1.02
+        }
+      }
+    },
+    "phi4-mini:latest": {
+      "~500T (1,500文字)": {
+        "1_questions": {
+          "query_first": {
+            "latencies": [
+              5460.99
+            ],
+            "first_latency_ms": 5460.99,
+            "avg_subsequent_ms": 5460.99,
+            "total_latency_ms": 5460.99,
+            "verdicts": [
+              "Yes"
+            ]
+          },
+          "state_first": {
+            "latencies": [
+              4164.43
+            ],
+            "first_latency_ms": 4164.43,
+            "avg_subsequent_ms": 4164.43,
+            "total_latency_ms": 4164.43,
+            "verdicts": [
+              "Yes"
+            ]
+          },
+          "speedup_total": 1.31,
+          "speedup_subsequent": 1.31
+        },
+        "4_questions": {
+          "query_first": {
+            "latencies": [
+              3890.35,
+              3356.15,
+              3430.9,
+              3528.09
+            ],
+            "first_latency_ms": 3890.35,
+            "avg_subsequent_ms": 3438.38,
+            "total_latency_ms": 14205.49,
+            "verdicts": [
+              "Yes",
+              "Yes",
+              "No",
+              "Yes"
+            ]
+          },
+          "state_first": {
+            "latencies": [
+              4089.95,
+              115.26,
+              114.53,
+              120.04
+            ],
+            "first_latency_ms": 4089.95,
+            "avg_subsequent_ms": 116.61,
+            "total_latency_ms": 4439.78,
+            "verdicts": [
+              "Yes",
+              "No",
+              "No",
+              "Yes"
+            ]
+          },
+          "speedup_total": 3.2,
+          "speedup_subsequent": 29.49
+        },
+        "8_questions": {
+          "query_first": {
+            "latencies": [
+              4065.18,
+              3517.92,
+              3569.17,
+              3680.51,
+              3619.93,
+              3739.15,
+              3738.63,
+              3759.17
+            ],
+            "first_latency_ms": 4065.18,
+            "avg_subsequent_ms": 3660.64,
+            "total_latency_ms": 29689.66,
+            "verdicts": [
+              "Yes",
+              "Yes",
+              "No",
+              "Yes",
+              "No",
+              "No",
+              "Yes",
+              "No"
+            ]
+          },
+          "state_first": {
+            "latencies": [
+              4254.12,
+              122.26,
+              118.0,
+              114.66,
+              112.98,
+              116.6,
+              116.16,
+              116.84
+            ],
+            "first_latency_ms": 4254.12,
+            "avg_subsequent_ms": 116.79,
+            "total_latency_ms": 5071.62,
+            "verdicts": [
+              "Yes",
+              "No",
+              "No",
+              "Yes",
+              "No",
+              "No",
+              "Yes",
+              "No"
+            ]
+          },
+          "speedup_total": 5.85,
+          "speedup_subsequent": 31.34
+        }
+      },
+      "~2,000T (6,000文字)": {
+        "1_questions": {
+          "query_first": {
+            "latencies": [
+              6864.17
+            ],
+            "first_latency_ms": 6864.17,
+            "avg_subsequent_ms": 6864.17,
+            "total_latency_ms": 6864.17,
+            "verdicts": [
+              "No"
+            ]
+          },
+          "state_first": {
+            "latencies": [
+              6859.47
+            ],
+            "first_latency_ms": 6859.47,
+            "avg_subsequent_ms": 6859.47,
+            "total_latency_ms": 6859.47,
+            "verdicts": [
+              "Yes"
+            ]
+          },
+          "speedup_total": 1.0,
+          "speedup_subsequent": 1.0
+        },
+        "4_questions": {
+          "query_first": {
+            "latencies": [
+              6904.7,
+              60.11,
+              60.58,
+              67.35
+            ],
+            "first_latency_ms": 6904.7,
+            "avg_subsequent_ms": 62.68,
+            "total_latency_ms": 7092.74,
+            "verdicts": [
+              "No",
+              "No",
+              "No",
+              "No"
+            ]
+          },
+          "state_first": {
+            "latencies": [
+              6959.38,
+              6616.19,
+              6603.94,
+              6694.3
+            ],
+            "first_latency_ms": 6959.38,
+            "avg_subsequent_ms": 6638.14,
+            "total_latency_ms": 26873.81,
+            "verdicts": [
+              "Yes",
+              "No",
+              "No",
+              "Yes"
+            ]
+          },
+          "speedup_total": 0.26,
+          "speedup_subsequent": 0.01
+        },
+        "8_questions": {
+          "query_first": {
+            "latencies": [
+              7001.29,
+              59.87,
+              56.53,
+              56.53,
+              60.78,
+              79.32,
+              68.19,
+              62.39
+            ],
+            "first_latency_ms": 7001.29,
+            "avg_subsequent_ms": 63.37,
+            "total_latency_ms": 7444.9,
+            "verdicts": [
+              "No",
+              "No",
+              "No",
+              "No",
+              "No",
+              "No",
+              "No",
+              "No"
+            ]
+          },
+          "state_first": {
+            "latencies": [
+              6857.03,
+              6487.62,
+              6559.13,
+              6639.93,
+              6666.22,
+              196.56,
+              187.94,
+              7370.55
+            ],
+            "first_latency_ms": 6857.03,
+            "avg_subsequent_ms": 4872.56,
+            "total_latency_ms": 40964.98,
+            "verdicts": [
+              "Yes",
+              "No",
+              "No",
+              "Yes",
+              "No",
+              "No",
+              "Yes",
+              "Yes"
+            ]
+          },
+          "speedup_total": 0.18,
+          "speedup_subsequent": 0.01
+        }
+      },
+      "~4,000T (12,000文字)": {
+        "1_questions": {
+          "query_first": {
+            "latencies": [
+              8192.21
+            ],
+            "first_latency_ms": 8192.21,
+            "avg_subsequent_ms": 8192.21,
+            "total_latency_ms": 8192.21,
+            "verdicts": [
+              "No"
+            ]
+          },
+          "state_first": {
+            "latencies": [
+              9257.68
+            ],
+            "first_latency_ms": 9257.68,
+            "avg_subsequent_ms": 9257.68,
+            "total_latency_ms": 9257.68,
+            "verdicts": [
+              "Yes"
+            ]
+          },
+          "speedup_total": 0.88,
+          "speedup_subsequent": 0.88
+        },
+        "4_questions": {
+          "query_first": {
+            "latencies": [
+              7678.92,
+              80.63,
+              78.4,
+              77.94
+            ],
+            "first_latency_ms": 7678.92,
+            "avg_subsequent_ms": 78.99,
+            "total_latency_ms": 7915.89,
+            "verdicts": [
+              "No",
+              "No",
+              "No",
+              "No"
+            ]
+          },
+          "state_first": {
+            "latencies": [
+              7950.27,
+              8080.52,
+              7426.07,
+              7731.51
+            ],
+            "first_latency_ms": 7950.27,
+            "avg_subsequent_ms": 7746.03,
+            "total_latency_ms": 31188.37,
+            "verdicts": [
+              "Yes",
+              "No",
+              "No",
+              "Yes"
+            ]
+          },
+          "speedup_total": 0.25,
+          "speedup_subsequent": 0.01
+        },
+        "8_questions": {
+          "query_first": {
+            "latencies": [
+              7151.42,
+              76.62,
+              76.98,
+              76.83,
+              75.44,
+              75.3,
+              73.08,
+              75.16
+            ],
+            "first_latency_ms": 7151.42,
+            "avg_subsequent_ms": 75.63,
+            "total_latency_ms": 7680.83,
+            "verdicts": [
+              "No",
+              "No",
+              "No",
+              "No",
+              "No",
+              "No",
+              "No",
+              "No"
+            ]
+          },
+          "state_first": {
+            "latencies": [
+              7818.33,
+              7760.51,
+              7776.78,
+              7874.49,
+              7639.59,
+              266.11,
+              234.07,
+              7543.95
+            ],
+            "first_latency_ms": 7818.33,
+            "avg_subsequent_ms": 5585.07,
+            "total_latency_ms": 46913.83,
+            "verdicts": [
+              "Yes",
+              "No",
+              "No",
+              "Yes",
+              "No",
+              "No",
+              "Yes",
+              "Yes"
+            ]
+          },
+          "speedup_total": 0.16,
+          "speedup_subsequent": 0.01
+        }
+      }
+    }
+  }
+}
