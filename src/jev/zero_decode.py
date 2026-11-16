@@ -51,6 +51,80 @@ def _parse_logprobs(response_data: Dict[str, Any]) -> Dict[str, float]:
     return result
 
 
+UsageDict = Dict[str, Optional[int]]
+
+
+def _to_int_or_none(value: Any) -> Optional[int]:
+    if isinstance(value, int) and not isinstance(value, bool):
+        return value
+    return None
+
+
+def _parse_usage(response_data: Dict[str, Any]) -> Optional[UsageDict]:
+    """レスポンス JSON からトークン消費量（usage）を抽出する。"""
+    usage = response_data.get("usage")
+    if not isinstance(usage, dict):
+        return None
+
+    in_tokens = _to_int_or_none(usage.get("prompt_tokens"))
+    if in_tokens is None:
+        in_tokens = _to_int_or_none(usage.get("input_tokens"))
+
+    out_tokens = _to_int_or_none(usage.get("completion_tokens"))
+    if out_tokens is None:
+        out_tokens = _to_int_or_none(usage.get("output_tokens"))
+
+    if in_tokens is None and out_tokens is None:
+        return None
+    return {"input_tokens": in_tokens, "output_tokens": out_tokens}
+
+
+def merge_usage(usages: Sequence[Optional[UsageDict]]) -> Optional[UsageDict]:
+    """複数回の Forward から得られた usage を合算する。"""
+    in_values = [u["input_tokens"] for u in usages if u and u.get("input_tokens") is not None]
+    out_values = [u["output_tokens"] for u in usages if u and u.get("output_tokens") is not None]
+
+    in_sum = sum(v for v in in_values if v is not None) if in_values else None
+    out_sum = sum(v for v in out_values if v is not None) if out_values else None
+
+    if in_sum is None and out_sum is None:
+        return None
+    return {"input_tokens": in_sum, "output_tokens": out_sum}
+
+
+def _post_chat_completion(
+    endpoint_url: str,
+    payload: Dict[str, Any],
+    headers: Dict[str, str],
+    timeout_sec: float,
+    connect_error_prefix: str,
+    http_error_prefix: str,
+) -> Tuple[Dict[str, float], float, Optional[UsageDict]]:
+    """OpenAI 互換 chat/completions API へ 1 サイクル推論を送信し、logprobs・遅延・usage を返す。"""
+    t_start = time.perf_counter()
+    try:
+        resp = requests.post(
+            endpoint_url,
+            json=payload,
+            headers=headers,
+            timeout=timeout_sec,
+        )
+    except Exception as e:
+        msg = f"{connect_error_prefix} at {endpoint_url}: {e}"
+        logger.error(msg)
+        raise BackendConnectionError(msg) from e
+
+    latency_ms = (time.perf_counter() - t_start) * 1000.0
+
+    if resp.status_code != 200:
+        msg = f"{http_error_prefix} returned HTTP {resp.status_code}: {resp.text}"
+        logger.error(msg)
+        raise BackendConnectionError(msg)
+
+    data = resp.json()
+    return _parse_logprobs(data), latency_ms, _parse_usage(data)
+
+
 # クラウド API のモデル識別名に使われる接頭辞（/evaluate がバックエンドを自動選択する際の目安）
 CLOUD_MODEL_PREFIXES = ("gpt-", "o1-", "o3-", "text-embedding", "claude-", "gemini-")
 
@@ -97,11 +171,46 @@ class InferenceBackend(ABC):
         """
         return self.forward(model, messages, top_logprobs=top_logprobs)
 
+    def forward_with_usage(
+        self,
+        model: str,
+        messages: List[Dict[str, str]],
+        target_tokens: Optional[Sequence[str]] = None,
+        top_logprobs: int = 10,
+    ) -> Tuple[Dict[str, float], float, Optional[UsageDict]]:
+        """usage 情報付きで 1 サイクル推論を実行する（後方互換拡張ポイント）。
+
+        既定実装は target_tokens の有無に応じて forward_constrained() または forward() を呼び、
+        usage には None を返すため、既存サブクラスは変更なしで動作する。
+        """
+        if target_tokens:
+            logprobs, latency_ms = self.forward_constrained(
+                model, messages, target_tokens, top_logprobs=top_logprobs
+            )
+        else:
+            logprobs, latency_ms = self.forward(model, messages, top_logprobs=top_logprobs)
+        return logprobs, latency_ms, None
+
     @property
     @abstractmethod
     def is_cloud(self) -> bool:
         """ローカルGPU管理 (VRAMManager) をバイパスすべきクラウドバックエンドか"""
         pass
+
+
+def _build_chat_payload(
+    model: str,
+    messages: List[Dict[str, str]],
+    top_logprobs: int,
+) -> Dict[str, Any]:
+    return {
+        "model": model,
+        "messages": messages,
+        "max_tokens": 1,
+        "temperature": 0.0,
+        "logprobs": True,
+        "top_logprobs": top_logprobs,
+    }
 
 
 class OllamaBackend(InferenceBackend):
@@ -128,38 +237,24 @@ class OllamaBackend(InferenceBackend):
         messages: List[Dict[str, str]],
         top_logprobs: int = 10,
     ) -> Tuple[Dict[str, float], float]:
-        payload: Dict[str, Any] = {
-            "model": model,
-            "messages": messages,
-            "max_tokens": 1,
-            "temperature": 0.0,
-            "logprobs": True,
-            "top_logprobs": top_logprobs,
-        }
-
-        t_start = time.perf_counter()
-        try:
-            resp = requests.post(
-                self.endpoint_url,
-                json=payload,
-                headers={"Content-Type": "application/json"},
-                timeout=self.timeout_sec,
-            )
-        except Exception as e:
-            msg = f"Failed to connect to local Ollama at {self.endpoint_url}: {e}"
-            logger.error(msg)
-            raise BackendConnectionError(msg) from e
-
-        latency_ms = (time.perf_counter() - t_start) * 1000.0
-
-        if resp.status_code != 200:
-            msg = f"Ollama backend returned HTTP {resp.status_code}: {resp.text}"
-            logger.error(msg)
-            raise BackendConnectionError(msg)
-
-        data = resp.json()
-        logprobs_dict = _parse_logprobs(data)
+        logprobs_dict, latency_ms, _ = self.forward_with_usage(model, messages, top_logprobs=top_logprobs)
         return logprobs_dict, latency_ms
+
+    def forward_with_usage(
+        self,
+        model: str,
+        messages: List[Dict[str, str]],
+        target_tokens: Optional[Sequence[str]] = None,
+        top_logprobs: int = 10,
+    ) -> Tuple[Dict[str, float], float, Optional[UsageDict]]:
+        return _post_chat_completion(
+            endpoint_url=self.endpoint_url,
+            payload=_build_chat_payload(model, messages, top_logprobs),
+            headers={"Content-Type": "application/json"},
+            timeout_sec=self.timeout_sec,
+            connect_error_prefix="Failed to connect to local Ollama",
+            http_error_prefix="Ollama backend",
+        )
 
 
 class OpenAIBackend(InferenceBackend):
@@ -200,48 +295,33 @@ class OpenAIBackend(InferenceBackend):
         messages: List[Dict[str, str]],
         top_logprobs: int = 10,
     ) -> Tuple[Dict[str, float], float]:
+        logprobs_dict, latency_ms, _ = self.forward_with_usage(model, messages, top_logprobs=top_logprobs)
+        return logprobs_dict, latency_ms
+
+    def forward_with_usage(
+        self,
+        model: str,
+        messages: List[Dict[str, str]],
+        target_tokens: Optional[Sequence[str]] = None,
+        top_logprobs: int = 10,
+    ) -> Tuple[Dict[str, float], float, Optional[UsageDict]]:
         if not self.api_key:
             raise BackendConnectionError(
                 "OpenAI API key is missing. Set OPENAI_API_KEY in environment or pass api_key."
             )
 
-        payload: Dict[str, Any] = {
-            "model": model,
-            "messages": messages,
-            "max_tokens": 1,
-            "temperature": 0.0,
-            "logprobs": True,
-            "top_logprobs": top_logprobs,
-        }
-
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.api_key}",
         }
-
-        t_start = time.perf_counter()
-        try:
-            resp = requests.post(
-                self.endpoint_url,
-                json=payload,
-                headers=headers,
-                timeout=self.timeout_sec,
-            )
-        except Exception as e:
-            msg = f"Failed to connect to cloud backend at {self.endpoint_url}: {e}"
-            logger.error(msg)
-            raise BackendConnectionError(msg) from e
-
-        latency_ms = (time.perf_counter() - t_start) * 1000.0
-
-        if resp.status_code != 200:
-            msg = f"Cloud backend returned HTTP {resp.status_code}: {resp.text}"
-            logger.error(msg)
-            raise BackendConnectionError(msg)
-
-        data = resp.json()
-        logprobs_dict = _parse_logprobs(data)
-        return logprobs_dict, latency_ms
+        return _post_chat_completion(
+            endpoint_url=self.endpoint_url,
+            payload=_build_chat_payload(model, messages, top_logprobs),
+            headers=headers,
+            timeout_sec=self.timeout_sec,
+            connect_error_prefix="Failed to connect to cloud backend",
+            http_error_prefix="Cloud backend",
+        )
 
 
 class ZeroDecodeClient:
@@ -288,4 +368,19 @@ class ZeroDecodeClient:
                 model, messages, target_tokens, top_logprobs=top_logprobs
             )
         return self.backend.forward(model, messages, top_logprobs=top_logprobs)
+
+    def forward_with_usage(
+        self,
+        model: str,
+        messages: List[Dict[str, str]],
+        top_logprobs: int = 10,
+        target_tokens: Optional[Sequence[str]] = None,
+    ) -> Tuple[Dict[str, float], float, Optional[UsageDict]]:
+        """usage 情報付きで 1 サイクル推論を実行する（Issue #70）。"""
+        return self.backend.forward_with_usage(
+            model,
+            messages,
+            target_tokens=target_tokens,
+            top_logprobs=top_logprobs,
+        )
 

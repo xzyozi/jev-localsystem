@@ -6,7 +6,7 @@ TypeSafe Jev / OpenJev 風の 1リクエスト複数質問バッチ評価 API �
 
 import json
 import time
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends
 
@@ -18,9 +18,10 @@ from jev.dto import (
     MultiLabelQuestionDTO,
     NoulQuestionDTO,
     ScoreQuestionDTO,
+    _empty_usage,
 )
 from jev.server.api.v1.judge import get_pipeline
-from jev.zero_decode import OpenAIBackend, ZeroDecodeClient, is_cloud_model_name
+from jev.zero_decode import OpenAIBackend, UsageDict, ZeroDecodeClient, is_cloud_model_name, merge_usage
 
 router = APIRouter(tags=["JEV Batch Evaluation"])
 
@@ -61,6 +62,7 @@ def evaluate_batch(
     custom_client = _resolve_client(request)
 
     answers: Dict[str, Any] = {}
+    usages: List[Optional[UsageDict]] = []
 
     for q_name, q in request.questions.items():
         instructions = q.instructions or ""
@@ -183,12 +185,14 @@ def evaluate_batch(
                 "error_message": res.error_message,
             }
 
+        usages.append(res.usage)
+
     total_latency_ms = (time.perf_counter() - t_start) * 1000.0
 
     return EvaluateResponseDTO(
         model=target_model,
         answers=answers,
-        usage={"input_tokens": None, "output_tokens": None},
+        usage=merge_usage(usages) or _empty_usage(),
         meta={
             "mode": "zero_decode",
             "latency_ms": round(total_latency_ms, 2),

@@ -19,7 +19,7 @@ from jev.exceptions import (
 from jev.prompt_builder import PromptBuilder
 from jev.result_mapper import ResultMapper
 from jev.vram_manager import VRAMManager, default_vram_manager
-from jev.zero_decode import ZeroDecodeClient
+from jev.zero_decode import UsageDict, ZeroDecodeClient, merge_usage
 
 logger = logging.getLogger("jev.pipeline")
 if not logger.handlers:
@@ -111,43 +111,53 @@ class JudgePipeline:
         self, request: JudgeRequestDTO, model_name: str, t_start: float, client: ZeroDecodeClient
     ) -> JudgeResponseDTO:
         messages, target_tokens, _ = PromptBuilder.build_messages(request, model_name)
-        logprobs, _ = client.forward(model_name, messages, target_tokens=target_tokens)
+        logprobs, _, usage = client.forward_with_usage(model_name, messages, target_tokens=target_tokens)
         total_latency = (time.perf_counter() - t_start) * 1000.0
-        return ResultMapper.map_noul(logprobs, total_latency)
+        res = ResultMapper.map_noul(logprobs, total_latency)
+        res.usage = usage
+        return res
 
     def _execute_choice(
         self, request: JudgeRequestDTO, model_name: str, t_start: float, client: ZeroDecodeClient
     ) -> JudgeResponseDTO:
         # 1. 通常 Forward
         messages_fwd, tokens_fwd, symbol_map_fwd = PromptBuilder.build_messages(request, model_name, swap=False)
-        logprobs_fwd, _ = client.forward(model_name, messages_fwd, target_tokens=tokens_fwd)
+        logprobs_fwd, _, usage_fwd = client.forward_with_usage(model_name, messages_fwd, target_tokens=tokens_fwd)
 
         logprobs_swap = None
         symbol_map_swap = None
+        usages: List[Optional[UsageDict]] = [usage_fwd]
 
         # 2. A/Bスワップ検証 (Issue #4 仕様)
         if request.swap_verify and len(request.labels) >= 2:
             messages_swap, tokens_swap, symbol_map_swap = PromptBuilder.build_messages(request, model_name, swap=True)
-            logprobs_swap, _ = client.forward(model_name, messages_swap, target_tokens=tokens_swap)
+            logprobs_swap, _, usage_swap = client.forward_with_usage(
+                model_name, messages_swap, target_tokens=tokens_swap
+            )
+            usages.append(usage_swap)
 
         total_latency = (time.perf_counter() - t_start) * 1000.0
-        return ResultMapper.map_choice(
+        res = ResultMapper.map_choice(
             logprobs_forward=logprobs_fwd,
             symbol_map_forward=symbol_map_fwd,
             latency_ms=total_latency,
             logprobs_swap=logprobs_swap,
             symbol_map_swap=symbol_map_swap,
         )
+        res.usage = merge_usage(usages)
+        return res
 
     def _execute_score(
         self, request: JudgeRequestDTO, model_name: str, t_start: float, client: ZeroDecodeClient
     ) -> JudgeResponseDTO:
         messages, target_tokens, _ = PromptBuilder.build_messages(request, model_name)
-        logprobs, _ = client.forward(model_name, messages, target_tokens=target_tokens)
+        logprobs, _, usage = client.forward_with_usage(model_name, messages, target_tokens=target_tokens)
         total_latency = (time.perf_counter() - t_start) * 1000.0
-        return ResultMapper.map_score(
+        res = ResultMapper.map_score(
             logprobs, total_latency, temperature=request.temperature, levels=request.score_levels
         )
+        res.usage = usage
+        return res
 
     def _execute_multilabel(
         self, request: JudgeRequestDTO, model_name: str, t_start: float, client: ZeroDecodeClient
@@ -157,15 +167,19 @@ class JudgePipeline:
             raise ValueError("Multi-Label task requires non-empty request.labels")
 
         label_results = []
+        usages: List[Optional[UsageDict]] = []
         for lbl in labels:
             messages, target_tokens, _ = PromptBuilder.build_messages(request, model_name, single_label_target=lbl)
-            logprobs, _ = client.forward(model_name, messages, target_tokens=target_tokens)
+            logprobs, _, usage = client.forward_with_usage(model_name, messages, target_tokens=target_tokens)
             label_results.append((lbl, logprobs))
+            usages.append(usage)
 
         total_latency = (time.perf_counter() - t_start) * 1000.0
-        return ResultMapper.map_multilabel(
+        res = ResultMapper.map_multilabel(
             label_results, total_latency, threshold=request.threshold, offset=request.offset
         )
+        res.usage = merge_usage(usages)
+        return res
 
 
     # ==========================================
