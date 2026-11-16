@@ -132,6 +132,9 @@ class JudgeResponseDTO(BaseModel):
     latency_ms: float = Field(..., description="パイプライン全体の処理所要時間（ミリ秒）")
     confidence: Optional[float] = Field(default=None, description="判定の確信度 (0.0 〜 1.0)")
     details: Dict[str, Any] = Field(default_factory=dict, description="タスク別詳細計算データ")
+    usage: Optional[Dict[str, Optional[int]]] = Field(
+        default=None, description="消費トークン数（バックエンドが返却した場合に設定）"
+    )
     error_message: Optional[str] = Field(default=None, description="エラー発生時のエラーメッセージ")
 
 
