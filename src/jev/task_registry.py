@@ -73,8 +73,9 @@ class TaskDefinition:
 
 def _validate_choice_request(request: JudgeRequestDTO) -> None:
     count = len(request.labels)
-    if not MIN_CHOICE_LABELS <= count <= MAX_CHOICE_LABELS:
-        raise ValueError(f"choice task requires {MIN_CHOICE_LABELS} to {MAX_CHOICE_LABELS} labels (got {count})")
+    max_choice = len(request.choice_symbols) if request.choice_symbols is not None else MAX_CHOICE_LABELS
+    if not MIN_CHOICE_LABELS <= count <= max_choice:
+        raise ValueError(f"choice task requires {MIN_CHOICE_LABELS} to {max_choice} labels (got {count})")
 
 
 def _validate_multilabel_request(request: JudgeRequestDTO) -> None:

@@ -7,10 +7,29 @@
 - 空白バリアント対応のターゲットトークン一覧管理 (Issue #1)
 """
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple, Union
 
-from jev.dto import DEFAULT_SCORE_LEVELS, MAX_CHOICE_LABELS, JudgeRequestDTO
+from jev.dto import MIN_CHOICE_LABELS, JudgeRequestDTO
 from jev.model_profiles import PREFILL_THINK_TAG, PREFILL_THOUGHT_TAG, is_thinking, resolve_prefill
+from jev.prompt_templates import (
+    DEFAULT_CHOICE_SYMBOLS,
+    JAPANESE_TEMPLATE,
+    PromptTemplate,
+    resolve_prompt_template,
+)
+
+
+def _assemble_messages(
+    system_prompt: str, user_prompt: str, prefill: Optional[str]
+) -> List[Dict[str, str]]:
+    """system / user メッセージと任意のアシスタント Prefill を組み立てる"""
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ]
+    if prefill:
+        messages.append({"role": "assistant", "content": prefill})
+    return messages
 
 
 class PromptBuilder:
@@ -22,34 +41,19 @@ class PromptBuilder:
     PREFILL_THINK_TAG = PREFILL_THINK_TAG
     PREFILL_THOUGHT_TAG = PREFILL_THOUGHT_TAG
 
-    # Choiceタスクで使用する標準記号
-    CHOICE_SYMBOLS = ["A", "B", "C", "D", "E", "F", "G", "H"]
+    # Choiceタスクで使用する標準記号（後方互換のため維持。実体は jev.prompt_templates に集約）
+    CHOICE_SYMBOLS = list(DEFAULT_CHOICE_SYMBOLS)
     SCORE_SYMBOLS = ["1", "2", "3", "4", "5"]  # 既定（5段階）。段数は JudgeRequestDTO.score_levels で変わる
 
     # 5段階（検証済みの既定）のルーブリック。文言は実機検証時から変更しない
-    _SCORE_RUBRIC_5 = (
-        "あなたは厳密な段階評価判定器です。提示された基準に基づいて、対象テキストの品質や適合度を1〜5の5段階で評価してください。\n"
-        "説明は一切出力せず、必ず '1', '2', '3', '4', '5' のいずれか1文字の数字のみを出力してください。\n"
-        "1: 極めて低い / 不適合\n"
-        "2: 低い / やや不十分\n"
-        "3: 標準 / 合格水準\n"
-        "4: 高い / 良好\n"
-        "5: 極めて高い / 完璧"
-    )
+    _SCORE_RUBRIC_5 = JAPANESE_TEMPLATE.score_system_prompt_5
 
     @classmethod
-    def build_score_system_prompt(cls, levels: int) -> str:
+    def build_score_system_prompt(
+        cls, levels: int, template: Optional[Union[str, PromptTemplate]] = None
+    ) -> str:
         """段数に応じた Score 用 system prompt を返す（5段階は検証済みの固定文言）"""
-        if levels == DEFAULT_SCORE_LEVELS:
-            return cls._SCORE_RUBRIC_5
-        symbols = ", ".join(f"'{i}'" for i in range(1, levels + 1))
-        return (
-            f"あなたは厳密な段階評価判定器です。提示された基準に基づいて、対象テキストの品質や適合度を1〜{levels}の{levels}段階で評価してください。\n"
-            f"説明は一切出力せず、必ず {symbols} のいずれか1文字の数字のみを出力してください。\n"
-            "1: 最も低い / 不適合\n"
-            f"{levels}: 最も高い / 完璧\n"
-            "（途中の段階は基準の定義に従い、数値が大きいほど評価が高い）"
-        )
+        return resolve_prompt_template(template).build_score_system_prompt(levels)
 
     @classmethod
     def is_thinking_model(cls, model_name: str) -> bool:
@@ -68,6 +72,8 @@ class PromptBuilder:
         model_name: str,
         swap: bool = False,
         single_label_target: Optional[str] = None,
+        template: Optional[Union[str, PromptTemplate]] = None,
+        choice_symbols: Optional[Sequence[str]] = None,
     ) -> Tuple[List[Dict[str, str]], List[str], Dict[str, str]]:
         """リクエストに応じたプロンプト（チャットメッセージ列）と対象トークンリストを生成する
 
@@ -76,42 +82,48 @@ class PromptBuilder:
             model_name: 推論対象モデル名
             swap: Choiceタスクにおける選択肢順序の反転フラグ (Issue #4)
             single_label_target: Multi-Labelタスクで特定ラベルを個別評価する場合のラベル名 (Issue #5)
+            template: 使用するテンプレート名または PromptTemplate（省略時は request.prompt_template -> 'ja'）
+            choice_symbols: Choiceタスク用のカスタム選択肢記号（省略時は request.choice_symbols -> テンプレート既定）
 
         Returns:
             Tuple[messages, target_tokens, symbol_to_label_mapping]
         """
         task = request.task_type
         prefill = cls.get_prefill_string(model_name)
+        resolved_template = resolve_prompt_template(
+            template if template is not None else getattr(request, "prompt_template", None)
+        )
 
         if task == "noul":
-            return cls._build_noul_prompt(request, prefill)
+            return cls._build_noul_prompt(request, prefill, template=resolved_template)
         elif task == "choice":
-            return cls._build_choice_prompt(request, prefill, swap=swap)
+            effective_symbols = (
+                choice_symbols if choice_symbols is not None else getattr(request, "choice_symbols", None)
+            )
+            return cls._build_choice_prompt(
+                request, prefill, swap=swap, template=resolved_template, choice_symbols=effective_symbols
+            )
         elif task == "score":
-            return cls._build_score_prompt(request, prefill)
+            return cls._build_score_prompt(request, prefill, template=resolved_template)
         elif task == "multilabel":
-            return cls._build_multilabel_prompt(request, prefill, target_label=single_label_target)
+            return cls._build_multilabel_prompt(
+                request, prefill, target_label=single_label_target, template=resolved_template
+            )
         else:
             raise ValueError(f"Unsupported task_type: {task}")
 
     @classmethod
     def _build_noul_prompt(
-        cls, request: JudgeRequestDTO, prefill: Optional[str]
+        cls,
+        request: JudgeRequestDTO,
+        prefill: Optional[str],
+        template: Optional[PromptTemplate] = None,
     ) -> Tuple[List[Dict[str, str]], List[str], Dict[str, str]]:
-        system_prompt = (
-            "あなたは超高速な二値判定器です。提示された基準に基づいて、対象テキストが条件に合致するか判定してください。\n"
-            "説明や理由は一切不要です。必ず 'Yes' または 'No' のどちらか1単語のみを出力してください。"
-        )
-        rule_part = f"\n\n【判定基準】\n{request.rule_definition}" if request.rule_definition else ""
-        user_prompt = f"【対象テキスト】\n{request.context_text}{rule_part}\n\n判定結果 (Yes / No):"
+        tpl = template or resolve_prompt_template(None)
+        rule_part = f"\n\n{tpl.noul_rule_header}\n{request.rule_definition}" if request.rule_definition else ""
+        user_prompt = f"{tpl.context_header}\n{request.context_text}{rule_part}\n\n{tpl.noul_answer_prompt}"
 
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ]
-        if prefill:
-            messages.append({"role": "assistant", "content": prefill})
-
+        messages = _assemble_messages(tpl.noul_system_prompt, user_prompt, prefill)
         # 空白バリアントを含む対象トークン (Issue #1 仕様)
         target_tokens = ["Yes", "No", " Yes", " No"]
         mapping = {"Yes": "Yes", "No": "No"}
@@ -119,40 +131,44 @@ class PromptBuilder:
 
     @classmethod
     def _build_choice_prompt(
-        cls, request: JudgeRequestDTO, prefill: Optional[str], swap: bool = False
+        cls,
+        request: JudgeRequestDTO,
+        prefill: Optional[str],
+        swap: bool = False,
+        template: Optional[PromptTemplate] = None,
+        choice_symbols: Optional[Sequence[str]] = None,
     ) -> Tuple[List[Dict[str, str]], List[str], Dict[str, str]]:
+        tpl = template or resolve_prompt_template(None)
+        raw_symbols = choice_symbols if choice_symbols is not None else tpl.choice_symbols
+        available_symbols = JudgeRequestDTO.validate_choice_symbols(list(raw_symbols))
+        assert available_symbols is not None
+
         labels = list(request.labels)
-        if not labels:
-            raise ValueError("Choice task requires at least 2 labels in request.labels")
-        if len(labels) > MAX_CHOICE_LABELS:
+        if len(labels) < MIN_CHOICE_LABELS:
+            raise ValueError(f"Choice task requires at least {MIN_CHOICE_LABELS} labels in request.labels")
+        if len(labels) > len(available_symbols):
             # DTO 検証を通らない経路でも、ラベルを黙って切り捨てない
-            raise ValueError(f"Choice task supports at most {MAX_CHOICE_LABELS} labels (got {len(labels)})")
+            raise ValueError(
+                f"Choice task supports at most {len(available_symbols)} labels for the active choice_symbols "
+                f"(got {len(labels)})"
+            )
 
         # スワップ時は選択肢の順序を反転 (Issue #4 仕様)
         display_labels = list(reversed(labels)) if swap else labels
 
-        symbols = cls.CHOICE_SYMBOLS[: len(display_labels)]
+        symbols = available_symbols[: len(display_labels)]
         symbol_to_label = {sym: lbl for sym, lbl in zip(symbols, display_labels)}
 
         options_text = "\n".join([f"- {sym}: {lbl}" for sym, lbl in symbol_to_label.items()])
 
-        system_prompt = (
-            "あなたは高精度な単一選択分類器です。提示されたテキストがどの選択肢に最も合致するか判定してください。\n"
-            "説明や挨拶は一切出力せず、必ず選択肢のアルファベット記号（A, B, C...）の1文字のみを出力してください。"
-        )
-        rule_part = f"\n\n【分類基準】\n{request.rule_definition}" if request.rule_definition else ""
+        rule_part = f"\n\n{tpl.choice_rule_header}\n{request.rule_definition}" if request.rule_definition else ""
         user_prompt = (
-            f"【対象テキスト】\n{request.context_text}{rule_part}\n\n"
-            f"【選択肢】\n{options_text}\n\n"
-            f"判定記号 ({', '.join(symbols)}):"
+            f"{tpl.context_header}\n{request.context_text}{rule_part}\n\n"
+            f"{tpl.choice_options_header}\n{options_text}\n\n"
+            f"{tpl.choice_answer_prefix} ({', '.join(symbols)}):"
         )
 
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ]
-        if prefill:
-            messages.append({"role": "assistant", "content": prefill})
+        messages = _assemble_messages(tpl.choice_system_prompt, user_prompt, prefill)
 
         # 空白バリアントを含む対象トークン
         target_tokens = []
@@ -163,19 +179,20 @@ class PromptBuilder:
 
     @classmethod
     def _build_score_prompt(
-        cls, request: JudgeRequestDTO, prefill: Optional[str]
+        cls,
+        request: JudgeRequestDTO,
+        prefill: Optional[str],
+        template: Optional[PromptTemplate] = None,
     ) -> Tuple[List[Dict[str, str]], List[str], Dict[str, str]]:
+        tpl = template or resolve_prompt_template(None)
         levels = request.score_levels
-        system_prompt = cls.build_score_system_prompt(levels)
-        rule_part = f"\n\n【評価基準】\n{request.rule_definition}" if request.rule_definition else ""
-        user_prompt = f"【対象テキスト】\n{request.context_text}{rule_part}\n\n評価スコア (1-{levels}):"
+        system_prompt = tpl.build_score_system_prompt(levels)
+        rule_part = f"\n\n{tpl.score_rule_header}\n{request.rule_definition}" if request.rule_definition else ""
+        user_prompt = (
+            f"{tpl.context_header}\n{request.context_text}{rule_part}\n\n{tpl.score_answer_prefix} (1-{levels}):"
+        )
 
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ]
-        if prefill:
-            messages.append({"role": "assistant", "content": prefill})
+        messages = _assemble_messages(system_prompt, user_prompt, prefill)
 
         score_symbols = [str(i) for i in range(1, levels + 1)]
         target_tokens = []
@@ -187,28 +204,29 @@ class PromptBuilder:
 
     @classmethod
     def _build_multilabel_prompt(
-        cls, request: JudgeRequestDTO, prefill: Optional[str], target_label: Optional[str] = None
+        cls,
+        request: JudgeRequestDTO,
+        prefill: Optional[str],
+        target_label: Optional[str] = None,
+        template: Optional[PromptTemplate] = None,
     ) -> Tuple[List[Dict[str, str]], List[str], Dict[str, str]]:
         """Multi-Labelタスク向け独立Sigmoidプロンプト (Issue #5 実証仕様: 分離度10.76〜36.6pt)"""
-        label_to_eval = target_label if target_label else (request.labels[0] if request.labels else "汎用")
-
-        system_prompt = (
-            "あなたは専門分野分類器です。提示されたテキストが指定のカテゴリ・ラベルに関連しているか判定してください。\n"
-            "説明は一切出力せず、関連している場合は 'Yes'、関連していない場合は 'No' の1単語のみを出力してください。"
+        tpl = template or resolve_prompt_template(None)
+        label_to_eval = (
+            target_label
+            if target_label
+            else (request.labels[0] if request.labels else tpl.multilabel_default_label)
         )
-        rule_part = f"\n\n【判定ルール】\n{request.rule_definition}" if request.rule_definition else ""
+
+        rule_part = f"\n\n{tpl.multilabel_rule_header}\n{request.rule_definition}" if request.rule_definition else ""
+        question = tpl.multilabel_question_template.format(label=label_to_eval)
         user_prompt = (
-            f"【対象テキスト】\n{request.context_text}{rule_part}\n\n"
-            f"【評価カテゴリ】\n{label_to_eval}\n\n"
-            f"カテゴリ「{label_to_eval}」に該当しますか？ (Yes / No):"
+            f"{tpl.context_header}\n{request.context_text}{rule_part}\n\n"
+            f"{tpl.multilabel_category_header}\n{label_to_eval}\n\n"
+            f"{question}"
         )
 
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ]
-        if prefill:
-            messages.append({"role": "assistant", "content": prefill})
+        messages = _assemble_messages(tpl.multilabel_system_prompt, user_prompt, prefill)
 
         target_tokens = ["Yes", "No", " Yes", " No"]
         mapping = {"Yes": "Yes", "No": "No"}

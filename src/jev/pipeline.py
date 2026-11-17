@@ -8,7 +8,7 @@
 import logging
 import sys
 import time
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from jev.dto import JudgeRequestDTO, JudgeResponseDTO
 from jev.exceptions import (
@@ -16,6 +16,7 @@ from jev.exceptions import (
     PayloadTooLargeError,
     QueueTimeoutError,
 )
+from jev.prompt_templates import PromptTemplate, scoped_default_prompt_template
 from jev.task_registry import TaskRegistry, default_task_registry
 from jev.vram_manager import VRAMManager, default_vram_manager
 from jev.zero_decode import ZeroDecodeClient
@@ -41,6 +42,7 @@ class JudgePipeline:
         client: Optional[ZeroDecodeClient] = None,
         vram_manager: Optional[VRAMManager] = None,
         task_registry: Optional[TaskRegistry] = None,
+        default_prompt_template: Optional[Union[str, PromptTemplate]] = None,
     ):
         """
         Args:
@@ -49,12 +51,14 @@ class JudgePipeline:
             client: Zero-Decode クライアント (省略時はデフォルト)
             vram_manager: VRAMリソースマネージャー (省略時はシングルトン)
             task_registry: タスク種別レジストリ (省略時はデフォルトレジストリ)
+            default_prompt_template: 既定のプロンプトテンプレート名または PromptTemplate (省略時は 'ja')
         """
         self.default_model = default_model
         self.lightweight_model = lightweight_model
         self.client = client or ZeroDecodeClient()
         self.vram_manager = vram_manager or default_vram_manager
         self.task_registry = task_registry if task_registry is not None else default_task_registry
+        self.default_prompt_template = default_prompt_template
 
     def judge(
         self,
@@ -83,8 +87,9 @@ class JudgePipeline:
         t_start = time.perf_counter()
 
         # 2. VRAM Manager による直列実行ロック (クラウド時はバイパス)
+        fallback_template = self.default_prompt_template if request.prompt_template is None else None
         try:
-            with self.vram_manager.acquire(bypass=is_cloud):
+            with self.vram_manager.acquire(bypass=is_cloud), scoped_default_prompt_template(fallback_template):
                 return self.task_registry.execute(request, model_name, t_start, active_client)
 
         except (PayloadTooLargeError, QueueTimeoutError, BackendConnectionError):
@@ -99,7 +104,6 @@ class JudgePipeline:
                 latency_ms=round(elapsed_ms, 2),
                 error_message=str(e),
             )
-
 
     # ==========================================
     # ヘルパーショートカットメソッド
