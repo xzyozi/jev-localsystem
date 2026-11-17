@@ -5,9 +5,10 @@
 
 from typing import Any, Dict, List, Literal, Optional, Union
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_validator
 
-TaskType = Literal["noul", "choice", "score", "multilabel"]
+BuiltinTaskType = Literal["noul", "choice", "score", "multilabel"]
+TaskType = str
 JudgeStatus = Literal["SUCCESS", "INCONCLUSIVE", "ERROR"]
 
 # Choice で使える選択肢の最大数（記号 A〜H。PromptBuilder.CHOICE_SYMBOLS と一致させる）
@@ -66,6 +67,14 @@ class JudgeRequestDTO(BaseModel):
         default=0.0,
         description="Multi-LabelタスクでYes-NoのLogit差分に加えるオフセット",
     )
+    prompt_template: Optional[str] = Field(
+        default=None,
+        description="使用するプロンプトテンプレート名（'ja', 'en' 等）。省略時は既定（'ja'）",
+    )
+    choice_symbols: Optional[List[str]] = Field(
+        default=None,
+        description="Choiceタスクで使用するカスタム選択肢記号リスト（省略時はテンプレート既定の A〜H）",
+    )
 
     @field_validator("temperature")
     @classmethod
@@ -75,16 +84,31 @@ class JudgeRequestDTO(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def validate_labels_for_task(self) -> "JudgeRequestDTO":
-        """タスク種別ごとの labels 件数を検証する（黙った切り捨て・後段での ERROR 化を防ぐ）"""
-        count = len(self.labels)
-        if self.task_type == "choice" and not MIN_CHOICE_LABELS <= count <= MAX_CHOICE_LABELS:
-            raise ValueError(
-                f"choice task requires {MIN_CHOICE_LABELS} to {MAX_CHOICE_LABELS} labels (got {count})"
-            )
-        if self.task_type == "multilabel" and count == 0:
-            raise ValueError("multilabel task requires at least 1 label")
+    def validate_labels_for_task(self, info: ValidationInfo) -> "JudgeRequestDTO":
+        """タスク種別の登録状態とタスク固有パラメータを TaskRegistry 経由で検証する"""
+        from jev.task_registry import default_task_registry
+
+        registry = (
+            info.context.get("task_registry", default_task_registry)
+            if isinstance(info.context, dict)
+            else default_task_registry
+        )
+        registry.validate_request(self)
         return self
+
+    @field_validator("choice_symbols")
+    @classmethod
+    def validate_choice_symbols(cls, v: Optional[List[str]]) -> Optional[List[str]]:
+        """カスタム選択肢記号が有効（MIN_CHOICE_LABELS 個以上、空文字なし、重複なし）であることを検証する"""
+        if v is None:
+            return None
+        if len(v) < MIN_CHOICE_LABELS:
+            raise ValueError(f"choice_symbols requires at least {MIN_CHOICE_LABELS} symbols (got {len(v)})")
+        if any(not sym or not sym.strip() for sym in v):
+            raise ValueError("choice_symbols must not contain empty or whitespace-only symbols")
+        if len(set(v)) != len(v):
+            raise ValueError("choice_symbols must contain unique symbols")
+        return v
 
 
 class NoulDetails(BaseModel):
@@ -132,6 +156,9 @@ class JudgeResponseDTO(BaseModel):
     latency_ms: float = Field(..., description="パイプライン全体の処理所要時間（ミリ秒）")
     confidence: Optional[float] = Field(default=None, description="判定の確信度 (0.0 〜 1.0)")
     details: Dict[str, Any] = Field(default_factory=dict, description="タスク別詳細計算データ")
+    usage: Optional[Dict[str, Optional[int]]] = Field(
+        default=None, description="消費トークン数（バックエンドが返却した場合に設定）"
+    )
     error_message: Optional[str] = Field(default=None, description="エラー発生時のエラーメッセージ")
 
 

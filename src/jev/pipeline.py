@@ -8,7 +8,7 @@
 import logging
 import sys
 import time
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from jev.dto import JudgeRequestDTO, JudgeResponseDTO
 from jev.exceptions import (
@@ -16,8 +16,8 @@ from jev.exceptions import (
     PayloadTooLargeError,
     QueueTimeoutError,
 )
-from jev.prompt_builder import PromptBuilder
-from jev.result_mapper import ResultMapper
+from jev.prompt_templates import PromptTemplate, scoped_default_prompt_template
+from jev.task_registry import TaskRegistry, default_task_registry
 from jev.vram_manager import VRAMManager, default_vram_manager
 from jev.zero_decode import ZeroDecodeClient
 
@@ -41,6 +41,8 @@ class JudgePipeline:
         lightweight_model: str = DEFAULT_LIGHTWEIGHT_MODEL,
         client: Optional[ZeroDecodeClient] = None,
         vram_manager: Optional[VRAMManager] = None,
+        task_registry: Optional[TaskRegistry] = None,
+        default_prompt_template: Optional[Union[str, PromptTemplate]] = None,
     ):
         """
         Args:
@@ -48,11 +50,15 @@ class JudgePipeline:
             lightweight_model: 本番軽量モデル (Tier 2 Lightweight: phi4-mini:latest)
             client: Zero-Decode クライアント (省略時はデフォルト)
             vram_manager: VRAMリソースマネージャー (省略時はシングルトン)
+            task_registry: タスク種別レジストリ (省略時はデフォルトレジストリ)
+            default_prompt_template: 既定のプロンプトテンプレート名または PromptTemplate (省略時は 'ja')
         """
         self.default_model = default_model
         self.lightweight_model = lightweight_model
         self.client = client or ZeroDecodeClient()
         self.vram_manager = vram_manager or default_vram_manager
+        self.task_registry = task_registry if task_registry is not None else default_task_registry
+        self.default_prompt_template = default_prompt_template
 
     def judge(
         self,
@@ -81,18 +87,10 @@ class JudgePipeline:
         t_start = time.perf_counter()
 
         # 2. VRAM Manager による直列実行ロック (クラウド時はバイパス)
+        fallback_template = self.default_prompt_template if request.prompt_template is None else None
         try:
-            with self.vram_manager.acquire(bypass=is_cloud):
-                if request.task_type == "noul":
-                    return self._execute_noul(request, model_name, t_start, active_client)
-                elif request.task_type == "choice":
-                    return self._execute_choice(request, model_name, t_start, active_client)
-                elif request.task_type == "score":
-                    return self._execute_score(request, model_name, t_start, active_client)
-                elif request.task_type == "multilabel":
-                    return self._execute_multilabel(request, model_name, t_start, active_client)
-                else:
-                    raise ValueError(f"Unknown task_type: {request.task_type}")
+            with self.vram_manager.acquire(bypass=is_cloud), scoped_default_prompt_template(fallback_template):
+                return self.task_registry.execute(request, model_name, t_start, active_client)
 
         except (PayloadTooLargeError, QueueTimeoutError, BackendConnectionError):
             raise
@@ -106,67 +104,6 @@ class JudgePipeline:
                 latency_ms=round(elapsed_ms, 2),
                 error_message=str(e),
             )
-
-    def _execute_noul(
-        self, request: JudgeRequestDTO, model_name: str, t_start: float, client: ZeroDecodeClient
-    ) -> JudgeResponseDTO:
-        messages, target_tokens, _ = PromptBuilder.build_messages(request, model_name)
-        logprobs, _ = client.forward(model_name, messages, target_tokens=target_tokens)
-        total_latency = (time.perf_counter() - t_start) * 1000.0
-        return ResultMapper.map_noul(logprobs, total_latency)
-
-    def _execute_choice(
-        self, request: JudgeRequestDTO, model_name: str, t_start: float, client: ZeroDecodeClient
-    ) -> JudgeResponseDTO:
-        # 1. 通常 Forward
-        messages_fwd, tokens_fwd, symbol_map_fwd = PromptBuilder.build_messages(request, model_name, swap=False)
-        logprobs_fwd, _ = client.forward(model_name, messages_fwd, target_tokens=tokens_fwd)
-
-        logprobs_swap = None
-        symbol_map_swap = None
-
-        # 2. A/Bスワップ検証 (Issue #4 仕様)
-        if request.swap_verify and len(request.labels) >= 2:
-            messages_swap, tokens_swap, symbol_map_swap = PromptBuilder.build_messages(request, model_name, swap=True)
-            logprobs_swap, _ = client.forward(model_name, messages_swap, target_tokens=tokens_swap)
-
-        total_latency = (time.perf_counter() - t_start) * 1000.0
-        return ResultMapper.map_choice(
-            logprobs_forward=logprobs_fwd,
-            symbol_map_forward=symbol_map_fwd,
-            latency_ms=total_latency,
-            logprobs_swap=logprobs_swap,
-            symbol_map_swap=symbol_map_swap,
-        )
-
-    def _execute_score(
-        self, request: JudgeRequestDTO, model_name: str, t_start: float, client: ZeroDecodeClient
-    ) -> JudgeResponseDTO:
-        messages, target_tokens, _ = PromptBuilder.build_messages(request, model_name)
-        logprobs, _ = client.forward(model_name, messages, target_tokens=target_tokens)
-        total_latency = (time.perf_counter() - t_start) * 1000.0
-        return ResultMapper.map_score(
-            logprobs, total_latency, temperature=request.temperature, levels=request.score_levels
-        )
-
-    def _execute_multilabel(
-        self, request: JudgeRequestDTO, model_name: str, t_start: float, client: ZeroDecodeClient
-    ) -> JudgeResponseDTO:
-        labels = request.labels
-        if not labels:
-            raise ValueError("Multi-Label task requires non-empty request.labels")
-
-        label_results = []
-        for lbl in labels:
-            messages, target_tokens, _ = PromptBuilder.build_messages(request, model_name, single_label_target=lbl)
-            logprobs, _ = client.forward(model_name, messages, target_tokens=target_tokens)
-            label_results.append((lbl, logprobs))
-
-        total_latency = (time.perf_counter() - t_start) * 1000.0
-        return ResultMapper.map_multilabel(
-            label_results, total_latency, threshold=request.threshold, offset=request.offset
-        )
-
 
     # ==========================================
     # ヘルパーショートカットメソッド
