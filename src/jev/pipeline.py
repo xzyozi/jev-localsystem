@@ -8,7 +8,7 @@
 import logging
 import sys
 import time
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from jev.dto import JudgeRequestDTO, JudgeResponseDTO
 from jev.exceptions import (
@@ -17,6 +17,7 @@ from jev.exceptions import (
     QueueTimeoutError,
 )
 from jev.prompt_builder import PromptBuilder
+from jev.prompt_templates import PromptTemplate
 from jev.result_mapper import ResultMapper
 from jev.vram_manager import VRAMManager, default_vram_manager
 from jev.zero_decode import UsageDict, ZeroDecodeClient, merge_usage
@@ -41,6 +42,7 @@ class JudgePipeline:
         lightweight_model: str = DEFAULT_LIGHTWEIGHT_MODEL,
         client: Optional[ZeroDecodeClient] = None,
         vram_manager: Optional[VRAMManager] = None,
+        default_prompt_template: Optional[Union[str, PromptTemplate]] = None,
     ):
         """
         Args:
@@ -48,11 +50,13 @@ class JudgePipeline:
             lightweight_model: 本番軽量モデル (Tier 2 Lightweight: phi4-mini:latest)
             client: Zero-Decode クライアント (省略時はデフォルト)
             vram_manager: VRAMリソースマネージャー (省略時はシングルトン)
+            default_prompt_template: 既定のプロンプトテンプレート名または PromptTemplate (省略時は 'ja')
         """
         self.default_model = default_model
         self.lightweight_model = lightweight_model
         self.client = client or ZeroDecodeClient()
         self.vram_manager = vram_manager or default_vram_manager
+        self.default_prompt_template = default_prompt_template
 
     def judge(
         self,
@@ -110,7 +114,8 @@ class JudgePipeline:
     def _execute_noul(
         self, request: JudgeRequestDTO, model_name: str, t_start: float, client: ZeroDecodeClient
     ) -> JudgeResponseDTO:
-        messages, target_tokens, _ = PromptBuilder.build_messages(request, model_name)
+        template = request.prompt_template or self.default_prompt_template
+        messages, target_tokens, _ = PromptBuilder.build_messages(request, model_name, template=template)
         logprobs, _, usage = client.forward_with_usage(model_name, messages, target_tokens=target_tokens)
         total_latency = (time.perf_counter() - t_start) * 1000.0
         res = ResultMapper.map_noul(logprobs, total_latency)
@@ -120,8 +125,11 @@ class JudgePipeline:
     def _execute_choice(
         self, request: JudgeRequestDTO, model_name: str, t_start: float, client: ZeroDecodeClient
     ) -> JudgeResponseDTO:
+        template = request.prompt_template or self.default_prompt_template
         # 1. 通常 Forward
-        messages_fwd, tokens_fwd, symbol_map_fwd = PromptBuilder.build_messages(request, model_name, swap=False)
+        messages_fwd, tokens_fwd, symbol_map_fwd = PromptBuilder.build_messages(
+            request, model_name, swap=False, template=template
+        )
         logprobs_fwd, _, usage_fwd = client.forward_with_usage(model_name, messages_fwd, target_tokens=tokens_fwd)
 
         logprobs_swap = None
@@ -130,7 +138,9 @@ class JudgePipeline:
 
         # 2. A/Bスワップ検証 (Issue #4 仕様)
         if request.swap_verify and len(request.labels) >= 2:
-            messages_swap, tokens_swap, symbol_map_swap = PromptBuilder.build_messages(request, model_name, swap=True)
+            messages_swap, tokens_swap, symbol_map_swap = PromptBuilder.build_messages(
+                request, model_name, swap=True, template=template
+            )
             logprobs_swap, _, usage_swap = client.forward_with_usage(
                 model_name, messages_swap, target_tokens=tokens_swap
             )
@@ -150,7 +160,8 @@ class JudgePipeline:
     def _execute_score(
         self, request: JudgeRequestDTO, model_name: str, t_start: float, client: ZeroDecodeClient
     ) -> JudgeResponseDTO:
-        messages, target_tokens, _ = PromptBuilder.build_messages(request, model_name)
+        template = request.prompt_template or self.default_prompt_template
+        messages, target_tokens, _ = PromptBuilder.build_messages(request, model_name, template=template)
         logprobs, _, usage = client.forward_with_usage(model_name, messages, target_tokens=target_tokens)
         total_latency = (time.perf_counter() - t_start) * 1000.0
         res = ResultMapper.map_score(
@@ -166,10 +177,13 @@ class JudgePipeline:
         if not labels:
             raise ValueError("Multi-Label task requires non-empty request.labels")
 
+        template = request.prompt_template or self.default_prompt_template
         label_results = []
         usages: List[Optional[UsageDict]] = []
         for lbl in labels:
-            messages, target_tokens, _ = PromptBuilder.build_messages(request, model_name, single_label_target=lbl)
+            messages, target_tokens, _ = PromptBuilder.build_messages(
+                request, model_name, single_label_target=lbl, template=template
+            )
             logprobs, _, usage = client.forward_with_usage(model_name, messages, target_tokens=target_tokens)
             label_results.append((lbl, logprobs))
             usages.append(usage)

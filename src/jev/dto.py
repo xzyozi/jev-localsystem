@@ -66,6 +66,14 @@ class JudgeRequestDTO(BaseModel):
         default=0.0,
         description="Multi-LabelタスクでYes-NoのLogit差分に加えるオフセット",
     )
+    prompt_template: Optional[str] = Field(
+        default=None,
+        description="使用するプロンプトテンプレート名（'ja', 'en' 等）。省略時は既定（'ja'）",
+    )
+    choice_symbols: Optional[List[str]] = Field(
+        default=None,
+        description="Choiceタスクで使用するカスタム選択肢記号リスト（省略時はテンプレート既定の A〜H）",
+    )
 
     @field_validator("temperature")
     @classmethod
@@ -78,13 +86,28 @@ class JudgeRequestDTO(BaseModel):
     def validate_labels_for_task(self) -> "JudgeRequestDTO":
         """タスク種別ごとの labels 件数を検証する（黙った切り捨て・後段での ERROR 化を防ぐ）"""
         count = len(self.labels)
-        if self.task_type == "choice" and not MIN_CHOICE_LABELS <= count <= MAX_CHOICE_LABELS:
+        max_choice = len(self.choice_symbols) if self.choice_symbols is not None else MAX_CHOICE_LABELS
+        if self.task_type == "choice" and not MIN_CHOICE_LABELS <= count <= max_choice:
             raise ValueError(
-                f"choice task requires {MIN_CHOICE_LABELS} to {MAX_CHOICE_LABELS} labels (got {count})"
+                f"choice task requires {MIN_CHOICE_LABELS} to {max_choice} labels (got {count})"
             )
         if self.task_type == "multilabel" and count == 0:
             raise ValueError("multilabel task requires at least 1 label")
         return self
+
+    @field_validator("choice_symbols")
+    @classmethod
+    def validate_choice_symbols(cls, v: Optional[List[str]]) -> Optional[List[str]]:
+        """カスタム選択肢記号が有効（MIN_CHOICE_LABELS 個以上、空文字なし、重複なし）であることを検証する"""
+        if v is None:
+            return None
+        if len(v) < MIN_CHOICE_LABELS:
+            raise ValueError(f"choice_symbols requires at least {MIN_CHOICE_LABELS} symbols (got {len(v)})")
+        if any(not sym or not sym.strip() for sym in v):
+            raise ValueError("choice_symbols must not contain empty or whitespace-only symbols")
+        if len(set(v)) != len(v):
+            raise ValueError("choice_symbols must contain unique symbols")
+        return v
 
 
 class NoulDetails(BaseModel):
