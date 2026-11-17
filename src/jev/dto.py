@@ -5,9 +5,10 @@
 
 from typing import Any, Dict, List, Literal, Optional, Union
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_validator
 
-TaskType = Literal["noul", "choice", "score", "multilabel"]
+BuiltinTaskType = Literal["noul", "choice", "score", "multilabel"]
+TaskType = str
 JudgeStatus = Literal["SUCCESS", "INCONCLUSIVE", "ERROR"]
 
 # Choice で使える選択肢の最大数（記号 A〜H。PromptBuilder.CHOICE_SYMBOLS と一致させる）
@@ -75,15 +76,16 @@ class JudgeRequestDTO(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def validate_labels_for_task(self) -> "JudgeRequestDTO":
-        """タスク種別ごとの labels 件数を検証する（黙った切り捨て・後段での ERROR 化を防ぐ）"""
-        count = len(self.labels)
-        if self.task_type == "choice" and not MIN_CHOICE_LABELS <= count <= MAX_CHOICE_LABELS:
-            raise ValueError(
-                f"choice task requires {MIN_CHOICE_LABELS} to {MAX_CHOICE_LABELS} labels (got {count})"
-            )
-        if self.task_type == "multilabel" and count == 0:
-            raise ValueError("multilabel task requires at least 1 label")
+    def validate_labels_for_task(self, info: ValidationInfo) -> "JudgeRequestDTO":
+        """タスク種別の登録状態とタスク固有パラメータを TaskRegistry 経由で検証する"""
+        from jev.task_registry import default_task_registry
+
+        registry = (
+            info.context.get("task_registry", default_task_registry)
+            if isinstance(info.context, dict)
+            else default_task_registry
+        )
+        registry.validate_request(self)
         return self
 
 
