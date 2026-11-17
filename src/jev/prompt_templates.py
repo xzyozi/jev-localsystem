@@ -8,8 +8,10 @@ State-First 構造（対象テキスト `context_text` をルール定義や選�
 Prefix Caching を有効に保つ構造）を全テンプレートで維持する。
 """
 
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, Iterator, List, Optional, Tuple, Union
 
 from jev.dto import DEFAULT_SCORE_LEVELS
 
@@ -177,13 +179,34 @@ def clear_custom_prompt_templates() -> None:
     _custom_templates.clear()
 
 
+_default_template_ctx: ContextVar[Optional[Union[str, PromptTemplate]]] = ContextVar(
+    "_default_template_ctx", default=None
+)
+
+
+@contextmanager
+def scoped_default_prompt_template(
+    template: Optional[Union[str, PromptTemplate]],
+) -> Iterator[None]:
+    """実行スコープ内の既定プロンプトテンプレートを一時指定する（スレッド/非同期安全）。"""
+    if template is None:
+        yield
+        return
+    token = _default_template_ctx.set(template)
+    try:
+        yield
+    finally:
+        _default_template_ctx.reset(token)
+
+
 def resolve_prompt_template(template: Optional[Union[str, PromptTemplate]] = None) -> PromptTemplate:
     """テンプレート名または PromptTemplate インスタンスを解決して返す（省略時は 'ja'）。"""
-    if isinstance(template, PromptTemplate):
-        return template
-    target_name = DEFAULT_TEMPLATE_NAME if template is None else template
+    effective = _default_template_ctx.get() if template is None else template
+    if isinstance(effective, PromptTemplate):
+        return effective
+    target_name = DEFAULT_TEMPLATE_NAME if effective is None else effective
     if not isinstance(target_name, str):
-        raise TypeError(f"template must be str, PromptTemplate, or None (got {type(template).__name__})")
+        raise TypeError(f"template must be str, PromptTemplate, or None (got {type(effective).__name__})")
     for custom in _custom_templates:
         if custom.name == target_name:
             return custom

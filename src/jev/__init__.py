@@ -1,6 +1,7 @@
 """JEV (Judge & Evaluation via Vectorized-logits) Local System"""
 
 from jev.dto import (
+    BuiltinTaskType,
     ChoiceDetails,
     EvaluateRequestDTO,
     EvaluateResponseDTO,
@@ -30,6 +31,12 @@ from jev.prompt_templates import (
     resolve_prompt_template,
 )
 from jev.result_mapper import ResultMapper
+from jev.task_registry import (
+    TaskDefinition,
+    TaskHandler,
+    TaskRegistry,
+    default_task_registry,
+)
 from jev.vram_manager import VRAMManager, default_vram_manager
 from jev.zero_decode import (
     InferenceBackend,
@@ -41,6 +48,7 @@ from jev.zero_decode import (
 __version__ = "0.1.0"
 
 __all__ = [
+    "BuiltinTaskType",
     "TaskType",
     "JudgeStatus",
     "JudgeRequestDTO",
@@ -71,6 +79,9 @@ __all__ = [
     "OpenAIBackend",
     "ZeroDecodeClient",
     "ResultMapper",
-
+    "TaskDefinition",
+    "TaskHandler",
+    "TaskRegistry",
+    "default_task_registry",
     "JudgePipeline",
 ]
